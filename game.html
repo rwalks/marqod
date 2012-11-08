@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <title>Marqod -- Lord of the Dance</title>
+  <script src="javascript/jquery-1.4.2.min.js" type="text/javascript"></script>
+  <script src="javascript/jquery-ui-1.8.4.custom.min.js" type="text/javascript"></script>
+  <script src="javascript/jquery.cookie.js" type="text/javascript"></script>
+  <script src="javascript/socket.io.min.js" type="text/javascript"></script>
+  <script src="Game.js" type="text/javascript"></script>
+  <script src="GameEngine.js" type="text/javascript"></script>
+  <script src="Player.js" type="text/javascript"></script>
+  <script src="Weapon.js" type="text/javascript"></script>
+  <script src="Ammo.js" type="text/javascript"></script>
+ </head>
+
+<body style="background-color:black;">
+ <center>
+<![if !IE]>
+    <div id="wasd">        
+        <p>Welcome to my web dungeon.</p>
+    </div>
+<![endif]>
+
+   <canvas id="canvas" width="800" height="700">
+    Sorry your browser does not support Canvas. Please use different browser:
+    <a href="http://www.mozilla-europe.org/en/firefox/">Get Firefox</a> or
+    <a href="http://www.google.com/chrome">Get Chrome</a>
+
+   </canvas>
+</br>
+   <form class="search" id="chat_form" action="javascript:document.proGame.submitChat()">
+    Chat: <input class="text" type="text" id="chatbox_q"/>
+   </form>
+  </center>
+   <script type="text/javascript">
+       document.proGame = new GamePro();
+       document.proGame.Run();
+   </script>
+ </body>
+</html>
+
