@@ -32,7 +32,6 @@
     }
 
     function LoadContent () {
-        console.log('loading content');
         var cookie = $.cookie("progame");
         if (cookie != null) {
             //user already finished some maps
@@ -92,17 +91,18 @@
     }
 
     this.runConnection = function() {
-      socket.on('connect', function () { 
+      socket.on('connect', function () {
         setInterval(function() {document.proGame.tick()}, 1000 / 60);
       });
-      socket.on('init', function (data) { 
+      socket.on('init', function (data) {
+        console.log("INIT");
         setPlayer(data);
         LoadContent();
         gameActive = true;
       });
-      socket.on('push', function (data) { 
+      socket.on('push', function (data) {
         if (gameActive) {
-          game_engine.serverPush(data);
+          game_engine.pushData = data;
         }
       });
     }

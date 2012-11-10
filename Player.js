@@ -68,11 +68,11 @@ exports.Player = function(pid,server,weapon,ammo) {
 
   this.playerColor = {
     1:'rgba(255,0,0,1.0)',
-    1:'rgba(0,255,0,1.0)',
-    1:'rgba(0,100,255,1.0)',
-    1:'rgba(0,255,255,1.0)',
-    1:'rgba(255,255,0,1.0)',
-    1:'rgba(255,0,255,1.0)'
+    2:'rgba(0,255,0,1.0)',
+    3:'rgba(0,100,255,1.0)',
+    4:'rgba(0,255,255,1.0)',
+    5:'rgba(255,255,0,1.0)',
+    6:'rgba(255,0,255,1.0)'
   }
 
   this.serverPush = function (data) {

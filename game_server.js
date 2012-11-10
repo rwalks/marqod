@@ -94,6 +94,7 @@ function dropPlayer(socket) {
 }
 
 function tick() {
+  game_engine.deleteSweep();
   game_engine.Update();
   io.sockets.emit('push',engine.game_state);
 }

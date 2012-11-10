@@ -1,4 +1,7 @@
-﻿(function(exports) {
+﻿var WIDTH = 800;
+var HEIGHT = 700;
+
+(function(exports) {
 
 exports.GameEngine = function (serv, playerM, ammoM, weaponM){
   //support browser and server
@@ -9,8 +12,14 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
 
     this.game_state = {};
     this.messageBuffer = [];
+    this.clientBuffer = [];
     game_engine = this;
     var lastUpdate = +new Date;
+    var deleteQueue = {players: [], ammos: []};
+    var playerIndex = 1;
+    var ammoIndex = 1;
+    var gameBounds = {x: WIDTH, y: HEIGHT};
+    this.pushData;
 
     this.Initialize = function () {
       this.game_state.players = {};
@@ -19,7 +28,8 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
 
     this.addPlayer = function(pid) {
       if (!pid) {
-        pid = Object.keys(this.game_state.players).length + 1;
+        playerIndex += 1;
+        pid = playerIndex;
       }
       var p = new playerModel.Player(pid, server, weapon, ammo);
       this.game_state.players[pid] = p;
@@ -27,7 +37,12 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
     }
 
     this.dropPlayer = function(id) {
-      this.game_state.players[id] = null;
+      if (server == true) {
+        this.game_state.players[id] = null;
+        deleteQueue.players.push(id);
+      }else {
+        delete this.game_state.players[id];
+      }
     }
 
     this.LoadContent = function () {
@@ -42,55 +57,77 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
       }
     }
 
-    this.serverPush = function(data) {
+    this.serverPush = function() {
+      if (!this.pushData) {return;}
       if (typeof game_state === 'undefined'){
         game_state = {players: {}, ammos: {}};
       }
-      for (p in data.players) {
-        if (data.players[p] == null){
-          game_state.players[p] = null;
+      for (p in this.pushData.players) {
+        if (this.pushData.players[p] == null){
+          this.dropPlayer(p);
         }else {
           if (!this.game_state.players[p]) {
             this.addPlayer(p);
           }
-          this.game_state.players[p].serverPush(data.players[p]);
+          this.game_state.players[p].serverPush(this.pushData.players[p]);
         }
       }
-      for (a in data.ammos) {
-        if (data.ammos[a] == null){
-          game_state.ammos[a] = null;
+      for (a in this.pushData.ammos) {
+        if (this.pushData.ammos[a] == null){
+          this.dropAmmo(a);
         }else {
           if (!this.game_state.ammos[a]) {
-            console.log(data.ammos[a])
-            this.addAmmo(a,data.ammos[a].position,data.ammos[a].target);
+            this.addAmmo(a,this.pushData.ammos[a].position,this.pushData.ammos[a].target);
           }
-          this.game_state.ammos[a].serverPush(data.ammos[a]);
+          this.game_state.ammos[a].serverPush(this.pushData.ammos[a]);
         }
       }
     }
 
     this.Update = function () {
+      if (!server) {this.serverPush();}
       while (message = this.messageBuffer.pop()){
 //might have to limit this loop
+        if (!server){
+          this.clientBuffer.push(message);
+        }
         this.apply_player_message(message);
       }
       //update players
+      var resp;
       for (p in this.game_state.players){
-        if (this.game_state.players[p]){
+        var pl = this.game_state.players[p];
+        if (pl){
           try{
-            this.game_state.players[p].update(lastUpdate);
+            pl.update(lastUpdate);
+            if (this.checkBounds(pl.position)){
+              this.dropPlayer(p);
+            }
           } catch (e) {}
         }
       }
       for (a in this.game_state.ammos){
-        if (this.game_state.ammos[a] != null){
+        var am = this.game_state.ammos[a];
+        if (am != null){
           try{
-            this.game_state.ammos[a].update(lastUpdate);
+            am.update(lastUpdate);
+            if (this.checkBounds(am.position)){
+              this.dropAmmo(a);
+            }
           } catch (e) {}
         }
       }
 
       lastUpdate = +new Date;
+    }
+
+    this.checkBounds = function(position){
+      for (i in position){
+        if (position[i] < 0 || position[i] > gameBounds[i]){
+          return true;
+        }
+      }
+      return false;
     }
 
     this.getPlayer = function(player_id) {
@@ -117,7 +154,8 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
     }
 
     this.nextAmmoId = function() {
-      return Object.keys(this.game_state.ammos).length + 1;
+      ammoIndex += 1;
+      return ammoIndex;
     }
 
     this.addAmmo = function(aid, origin, target) {
@@ -128,7 +166,26 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
       this.game_state.ammos[aid] = a;
       return aid;
     }
+
+    this.dropAmmo = function(id) {
+      if (server == true) {
+        this.game_state.ammos[id] = null;
+        deleteQueue.ammos.push(id);
+      }else {
+        delete this.game_state.ammos[id];
+      }
+    }
+
+  this.deleteSweep = function() {
+    var objTypes = ['ammos','players'];
+    for (i in objTypes){
+      var t = objTypes[i];
+      for (j in deleteQueue[t]) {
+        delete this.game_state[t][deleteQueue[t][j]];
+      }
+    }
   }
+}
 
 function point_in_polygon(cx,cy,points) {
   within = false;
