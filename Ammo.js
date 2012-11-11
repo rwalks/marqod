@@ -8,6 +8,7 @@ exports.Ammo = function(id,origin,targ) {
   this.velocity = {};
   var maxSpeed = 200;
   this.attackVal = 10;
+  var serverTime = (typeof require === 'undefined') ? 0 : 10;
   var angle = (this.target && this.position) ?
     Math.atan2((this.position.y-this.target.y) , (this.target.x-this.position.x)) + (Math.PI / 2) :
     0;
@@ -23,8 +24,8 @@ exports.Ammo = function(id,origin,targ) {
 
   this.update = function(lastUpdate){
     var deltaT = Date.now() - lastUpdate;
-    this.position.x += (this.velocity.x / 1000) * deltaT;
-    this.position.y += (this.velocity.y / 1000) * deltaT;
+    this.position.x += (this.velocity.x / 1000) * (deltaT + serverTime);
+    this.position.y += (this.velocity.y / 1000) * (deltaT + serverTime);
   }
 
   this.serverPush = function (data) {

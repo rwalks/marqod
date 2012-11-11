@@ -1,14 +1,5 @@
 <!DOCTYPE html>
 <html>
-  image, canvas {
-      user-select: none;
-          -ms-user-select: none;
-          -webkit-user-select: none;
-          -khtml-user-select: none;
-          -moz-user-select: none;
-          -webkit-touch-callout: none;
-          -webkit-user-drag: none;
-              }
  <head>
   <title>Marqod -- Lord of the Dance</title>
   <script src="javascript/jquery-1.4.2.min.js" type="text/javascript"></script>
@@ -21,6 +12,28 @@
   <script src="Weapon.js" type="text/javascript"></script>
   <script src="Ammo.js" type="text/javascript"></script>
   <script src="Beast.js" type="text/javascript"></script>
+  <style>
+  #image, #canvas, #controls {
+      user-select: none;
+          -ms-user-select: none;
+          -webkit-user-select: none;
+          -khtml-user-select: none;
+          -moz-user-select: none;
+          -webkit-touch-callout: none;
+          -webkit-user-drag: none;
+              }
+               #container
+                {
+                 height: 700px;
+                 position: relative;
+                 width: 800px;
+                }
+                #controls
+                {
+                  position: absolute;
+                  width: 100%;
+                }
+              </style>
  </head>
 
 <body style="background-color:black;">
@@ -30,13 +43,28 @@
         <p>Welcome to my web dungeon.</p>
     </div>
 <![endif]>
-
+<div id ="container">
    <canvas id="canvas" width="800" height="700">
     Sorry your browser does not support Canvas. Please use different browser:
     <a href="http://www.mozilla-europe.org/en/firefox/">Get Firefox</a> or
     <a href="http://www.google.com/chrome">Get Chrome</a>
 
    </canvas>
+   <style>
+     #waveCount{
+       top: 0px;
+       right: 340px;
+       position: absolute;
+       width: 100%;
+       font-family: 'georgia';
+       font-size: 24px;
+       opacity: 0.6;
+     }
+   </style>
+     <div id="waveCount">
+       WAVE: 1
+    </div>
+  </div>
 </br>
    <form class="search" id="chat_form" action="javascript:document.proGame.submitChat()">
     Chat: <input class="text" type="text" id="chatbox_q"/>

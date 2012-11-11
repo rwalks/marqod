@@ -27,6 +27,7 @@
             _canvasBufferContext = _canvasBuffer.getContext('2d');
 
             game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast);
+            this.waveCount = $("#waveCount");
             return true;
         }
         return false;
@@ -101,6 +102,7 @@
         console.log("INIT");
         setPlayer(data);
         LoadContent();
+        setInterval(function() {document.proGame.updateMenus()}, 1000 / 10);
         gameActive = true;
       });
       socket.on('push', function (data) {
@@ -141,9 +143,9 @@
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         for(p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
-          _canvasBufferContext.fillStyle = plr.playerColor[p];
+          _canvasBufferContext.fillStyle = plr.playerColor[p % 6];
           _canvasBufferContext.font = '12px Georgia';
-          _canvasBufferContext.fillText("FARTINGTON",plr.position.x,plr.position.y);
+          _canvasBufferContext.fillText(plr.artAsset(),plr.position.x,plr.position.y);
         }
         if (game_engine.game_state.ammos != null){
           for(a in game_engine.game_state.ammos){
@@ -170,6 +172,10 @@
         _canvasContext.clearRect(0, 0, _canvas.width, _canvas.height);
         //_canvasBufferContext.globalCompositeOperation="source-atop";
         _canvasContext.drawImage(_canvasBuffer, 0, 0);
+    }
+
+    this.updateMenus = function() {
+      this.waveCount.text("WAVE: " + game_engine.waveCount);
     }
 
 }
