@@ -14,7 +14,8 @@ exports.Player = function(pid,server,weapon,ammo) {
   this.velocity = {x:0,y:0};
   var velocity = this.velocity;
   this.playerWeapon = new weapon.Weapon(ammo);
-  var serverTime = server ? 25 : 0;
+  var serverTime = server ? 0 : 0;
+  this.health = 100;
 
   this.update_state = function(msg){
     var ret;
@@ -84,6 +85,14 @@ exports.Player = function(pid,server,weapon,ammo) {
 
   this.click_message = function(type,coords) {
     return {playerId: this.id, 'type':type, 'coords':coords}
+  }
+
+  this.wound = function(dmg){
+    this.health -= dmg;
+    if (this.health <= 0){
+      return true;
+    }
+    return false;
   }
 
   this.action_message = function (key_id, state){

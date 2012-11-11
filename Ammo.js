@@ -7,11 +7,18 @@ exports.Ammo = function(id,origin,targ) {
   this.target = targ;
   this.velocity = {};
   var maxSpeed = 200;
-  var angle = Math.atan2((this.position.y-this.target.y) , (this.target.x-this.position.x)) + (Math.PI / 2);
+  this.attackVal = 10;
+  var angle = (this.target && this.position) ?
+    Math.atan2((this.position.y-this.target.y) , (this.target.x-this.position.x)) + (Math.PI / 2) :
+    0;
 
   this.setVelocity = function(){
     this.velocity.x = Math.sin(angle) * maxSpeed;
     this.velocity.y = Math.cos(angle) * maxSpeed;
+  }
+
+  this.damage = function(){
+    return [this.attackVal,true];
   }
 
   this.update = function(lastUpdate){

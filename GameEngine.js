@@ -3,27 +3,34 @@ var HEIGHT = 700;
 
 (function(exports) {
 
-exports.GameEngine = function (serv, playerM, ammoM, weaponM){
+exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
   //support browser and server
     var server = serv;
     var playerModel = server ? require('./Player.js') : playerM;
     var ammo = server ? require('./Ammo.js') : ammoM;
     var weapon = server ? require('./Weapon.js') : weaponM;
+    var beast = server ? require('./Beast.js') : beastM;
 
     this.game_state = {};
     this.messageBuffer = [];
     this.clientBuffer = [];
     game_engine = this;
     var lastUpdate = +new Date;
-    var deleteQueue = {players: [], ammos: []};
+    var lastMessage = +new Date;
+    var deleteQueue = {'players': [], 'ammos': [], 'beasts': []};
     var playerIndex = 1;
     var ammoIndex = 1;
+    var beastIndex = 1;
+    var waveCount = 1;
     var gameBounds = {x: WIDTH, y: HEIGHT};
+    var collisions;
     this.pushData;
+    var objTypes = ['ammos','players', 'beasts'];
 
     this.Initialize = function () {
-      this.game_state.players = {};
-      this.game_state.ammos = {};
+      for (ob in objTypes) {
+        this.game_state[objTypes[ob]] = {};
+      }
     }
 
     this.addPlayer = function(pid) {
@@ -36,17 +43,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
       return pid;
     }
 
-    this.dropPlayer = function(id) {
-      if (server == true) {
-        this.game_state.players[id] = null;
-        deleteQueue.players.push(id);
-      }else {
-        delete this.game_state.players[id];
-      }
-    }
-
     this.LoadContent = function () {
-        var gamePro = this;
         lastUpdate = +new Date;
     }
 
@@ -60,65 +57,100 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
     this.serverPush = function() {
       if (!this.pushData) {return;}
       if (typeof game_state === 'undefined'){
-        game_state = {players: {}, ammos: {}};
+        game_state = {players: {}, ammos: {}, beasts: {}};
       }
-      for (p in this.pushData.players) {
-        if (this.pushData.players[p] == null){
-          this.dropPlayer(p);
-        }else {
-          if (!this.game_state.players[p]) {
-            this.addPlayer(p);
+      lastMessage = this.pushData.lastMessage;
+      for (ob in objTypes) {
+        for (i in this.pushData[objTypes[ob]]) {
+          if (this.pushData[objTypes[ob]][i] == null) {
+            this.dropObject(i,objTypes[ob]);
+          }else {
+            if (!this.game_state[objTypes[ob]][i]) {
+              this.addObject(i,objTypes[ob]);
+            }
+            this.game_state[objTypes[ob]][i].serverPush(this.pushData[objTypes[ob]][i]);
           }
-          this.game_state.players[p].serverPush(this.pushData.players[p]);
         }
       }
-      for (a in this.pushData.ammos) {
-        if (this.pushData.ammos[a] == null){
-          this.dropAmmo(a);
-        }else {
-          if (!this.game_state.ammos[a]) {
-            this.addAmmo(a,this.pushData.ammos[a].position,this.pushData.ammos[a].target);
-          }
-          this.game_state.ammos[a].serverPush(this.pushData.ammos[a]);
+    }
+
+    this.applyClientBuffer = function(){
+      while (message = this.clientBuffer.pop()){
+        if (message.time >= this.lastMessage){
+          this.apply_player_message(message);
         }
       }
     }
 
     this.Update = function () {
-      if (!server) {this.serverPush();}
+      if (!server) {
+        this.serverPush();
+        //this.applyClientBuffer();
+      }
+
       while (message = this.messageBuffer.pop()){
 //might have to limit this loop
         if (!server){
-          this.clientBuffer.push(message);
+          this.clientBuffer.unshift(message);
+        } else {
+          if (this.messageBuffer.length == 0) {
+            lastMessage = message.time;
+          }
         }
         this.apply_player_message(message);
       }
-      //update players
-      var resp;
-      for (p in this.game_state.players){
-        var pl = this.game_state.players[p];
-        if (pl){
-          try{
-            pl.update(lastUpdate);
-            if (this.checkBounds(pl.position)){
-              this.dropPlayer(p);
-            }
-          } catch (e) {}
-        }
-      }
-      for (a in this.game_state.ammos){
-        var am = this.game_state.ammos[a];
-        if (am != null){
-          try{
-            am.update(lastUpdate);
-            if (this.checkBounds(am.position)){
-              this.dropAmmo(a);
-            }
-          } catch (e) {}
-        }
-      }
+      //update objects
+      
+      for (ob in objTypes) {
+        for (i in this.game_state[objTypes[ob]]){
+          var pl = this.game_state[objTypes[ob]][i];
+          if (pl){
+            try{
+              (objTypes[ob] == 'beasts') ? pl.update(lastUpdate,this.game_state) :
+                                           pl.update(lastUpdate);
+              if (objTypes[ob] != 'beasts' && this.checkBounds(pl)){
+                this.dropObject(i,objTypes[ob]);
+              }
+            } catch (e) {}
+          }
 
+         }
+      }
+      this.checkCollisions();
       lastUpdate = +new Date;
+    }
+
+
+    this.checkCollisions = function() {
+      for (b in this.game_state.beasts) {
+        for (p in this.game_state.players) {
+          //distance check for now
+          var d = this.distance(this.game_state.beasts[b],this.game_state.players[p]);
+          if (d < 50){
+            var dmg = this.game_state.beasts[b].attack(d);
+            if (dmg) {
+              if (this.game_state.players[p].wound(dmg)){
+                this.dropObject(p,'players');
+              }
+            }
+          }
+        }
+        for (a in this.game_state.ammos) {
+          //distance check for now
+          var d = this.distance(this.game_state.beasts[b],this.game_state.ammos[a]);
+          if (d < 10){
+            var dmg = this.game_state.ammos[a].damage();
+            if (dmg) {
+              if (dmg[1]) {
+                this.dropObject(a,'ammos');
+              }
+              if (this.game_state.beasts[b].wound(dmg[0])){
+                this.dropObject(b,'beasts');
+              }
+            }
+          }
+        }
+      }
     }
 
     this.checkBounds = function(position){
@@ -158,6 +190,26 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
       return ammoIndex;
     }
 
+    this.nextBeastId = function() {
+      beastIndex += 1;
+      return beastIndex;
+    }
+
+    this.addObject = function(id, type) {
+      if (type == 'players'){ this.addPlayer(id); }
+      if (type == 'ammos'){ this.addAmmo(id); }
+      if (type == 'beasts'){ this.addBeast(id); }
+    }
+
+    this.dropObject = function(id, type) {
+      if (server) {
+        this.game_state[type][id] = null;
+        deleteQueue[type].push(id);
+      }else {
+        delete this.game_state[type][id];
+      }
+    }
+
     this.addAmmo = function(aid, origin, target) {
       if (aid == null) {
         aid = this.nextAmmoId();
@@ -167,22 +219,51 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM){
       return aid;
     }
 
-    this.dropAmmo = function(id) {
-      if (server == true) {
-        this.game_state.ammos[id] = null;
-        deleteQueue.ammos.push(id);
-      }else {
-        delete this.game_state.ammos[id];
+    this.addBeast = function(id, origin) {
+      if (id == null) {
+        id = this.nextBeastId();
       }
+      var b = new beast.Beast(id,origin);
+      this.game_state.beasts[id] = b;
+      return id;
     }
 
+  this.spawnWave = function(level) {
+    var spawnNo = level*10;
+    for (var i=0; i<spawnNo; i++){
+      var position = {};
+      if (i % 2 == 0){
+        position.x = randomNumber(0,WIDTH);
+        position.y = (i % 3 == 0) ? HEIGHT + 10 : -10;
+      }else {
+        position.x = (i % 3 == 0) ? WIDTH + 10 : -10;
+        position.y = randomNumber(0,HEIGHT);
+      }
+      this.addBeast(null,position);
+    }
+  }
+
   this.deleteSweep = function() {
-    var objTypes = ['ammos','players'];
     for (i in objTypes){
       var t = objTypes[i];
       for (j in deleteQueue[t]) {
         delete this.game_state[t][deleteQueue[t][j]];
       }
+    }
+  }
+
+  this.waveCheck = function(hold){
+    if (!hold && Object.keys(this.game_state.players).length > 0){
+      if (Object.keys(this.game_state.beasts).length <= 0){
+        this.waveCount += 1;
+        this.spawnWave(waveCount);
+      }
+    }
+  }
+
+  this.distance = function(obj1, obj2) {
+    if (obj1 && obj2){
+      return Math.sqrt(Math.pow((obj2.position.x - obj1.position.x),2)+Math.pow((obj2.position.y-obj1.position.y),2));
     }
   }
 }
@@ -200,7 +281,9 @@ function point_in_polygon(cx,cy,points) {
   return within;
 }
 
-function distance(obj1, obj2) {
-  return Math.sqrt(Math.pow((obj2.x - obj1.x),2)+Math.pow((obj2.y-obj1.y),2));
+
+function randomNumber(min,max){
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
 }) (typeof exports === 'undefined'? this['engine']={}: exports);

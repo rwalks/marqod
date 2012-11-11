@@ -19,13 +19,14 @@
         socket = io.connect();
         _canvas = document.getElementById('canvas');
         if (_canvas && _canvas.getContext) {
+
             _canvasContext = _canvas.getContext('2d');
             _canvasBuffer = document.createElement('canvas');
             _canvasBuffer.width = _canvas.width;
             _canvasBuffer.height = _canvas.height;
             _canvasBufferContext = _canvasBuffer.getContext('2d');
 
-            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon);
+            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast);
             return true;
         }
         return false;
@@ -45,6 +46,7 @@
             LocalEvent(event);
         });
         $(document).bind('click', function (event) {
+          event.preventDefault();
             LocalEvent(event);
         });
 
@@ -84,6 +86,7 @@
             break;
         }
         if (msg) {
+          msg.time = Date.now();
           game_engine.queue_message(msg);
           socket.emit('msg', msg)
         }
@@ -139,16 +142,28 @@
         for(p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
           _canvasBufferContext.fillStyle = plr.playerColor[p];
+          _canvasBufferContext.font = '12px Georgia';
           _canvasBufferContext.fillText("FARTINGTON",plr.position.x,plr.position.y);
         }
         if (game_engine.game_state.ammos != null){
-        for(a in game_engine.game_state.ammos){
-          var am = game_engine.game_state.ammos[a];
-          if (am) {
-            _canvasBufferContext.fillStyle = 'rgba(250,0,50,1.0)';
-            _canvasBufferContext.fillText("*",am.position.x,am.position.y);
+          for(a in game_engine.game_state.ammos){
+            var am = game_engine.game_state.ammos[a];
+            if (am) {
+              _canvasBufferContext.font = '20px Georgia';
+              _canvasBufferContext.fillStyle = 'rgba(250,0,50,1.0)';
+              _canvasBufferContext.fillText("*",am.position.x,am.position.y);
+            }
           }
         }
+        if (game_engine.game_state.beasts != null){
+          for(a in game_engine.game_state.beasts){
+            var am = game_engine.game_state.beasts[a];
+            if (am) {
+              _canvasBufferContext.fillStyle = 'rgba(250,0,250,1.0)';
+              _canvasBufferContext.font = '20px Helvetica';
+              _canvasBufferContext.fillText(am.artAsset(),am.position.x,am.position.y);
+            }
+          }
         }
         //this.draw_commandBar();
         //draw buffer on screen
@@ -173,5 +188,5 @@ function point_in_polygon(cx,cy,points) {
 }
 
 function distance(obj1, obj2) {
-  return Math.sqrt(Math.pow((obj2.x - obj1.x),2)+Math.pow((obj2.y-obj1.y),2));
+  return Math.sqrt(Math.pow((obj2.position.x - obj1.position.x),2)+Math.pow((obj2.position.y-obj1.position.y),2));
 }

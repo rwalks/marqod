@@ -9,6 +9,7 @@ var playerModel = require('./Player.js');
 var weapon = require('./Weapon.js');
 var ammo = require('./Ammo.js');
 var players = {};
+var firstConnect = true;
 
 
 var app = http.createServer(handler),
@@ -56,6 +57,10 @@ io.sockets.on('connection', function (socket) {
   var pid = engine.addPlayer(false);
   players[pid] = socket;
   socket.emit('init',{'playerId' : pid})
+  if (firstConnect){
+    game_engine.spawnWave(1);
+    firstConnect = false;
+  }
 
   socket.on('msg', function(data) {
     handle_message(socket, data);
@@ -87,7 +92,7 @@ function dropPlayer(socket) {
       match = (players[p].id == socket.id);
     } catch (e) {}
     if (match){
-      engine.dropPlayer(p);
+      engine.dropObject(p,'players');
       players[p] = null;
     }
   }
@@ -95,8 +100,13 @@ function dropPlayer(socket) {
 
 function tick() {
   game_engine.deleteSweep();
+  game_engine.waveCheck(firstConnect);
   game_engine.Update();
   io.sockets.emit('push',engine.game_state);
+}
+
+function distance(obj1, obj2) {
+  return Math.sqrt(Math.pow((obj2.position.x - obj1.position.x),2)+Math.pow((obj2.position.y-obj1.position.y),2));
 }
 
 setInterval(function() {tick()}, 1000 / 20);
