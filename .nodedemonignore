@@ -1,0 +1,6 @@
+node_modules/
+package.json
+favicon.ico
+javascript/
+game.html
+README.md
