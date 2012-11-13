@@ -1,15 +1,16 @@
-﻿var WIDTH = 800;
+var WIDTH = 800;
 var HEIGHT = 700;
 
 (function(exports) {
 
-exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
+exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
   //support browser and server
     var server = serv;
     var playerModel = server ? require('./Player.js') : playerM;
     var ammo = server ? require('./Ammo.js') : ammoM;
     var weapon = server ? require('./Weapon.js') : weaponM;
     var beast = server ? require('./Beast.js') : beastM;
+    var wall = server ? require('./Wall.js') : wallM;
 
     this.game_state = {};
     this.messageBuffer = [];
@@ -17,15 +18,16 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
     game_engine = this;
     var lastUpdate = +new Date;
     var lastMessage = +new Date;
-    var deleteQueue = {'players': [], 'ammos': [], 'beasts': []};
+    var deleteQueue = {'players': [], 'ammos': [], 'beasts': [], 'walls': []};
     var playerIndex = 1;
     var ammoIndex = 1;
     var beastIndex = 1;
+    var wallIndex = 1;
     this.waveCount = 1;
     var gameBounds = {x: WIDTH, y: HEIGHT};
     var collisions;
     this.pushData;
-    var objTypes = ['ammos','players', 'beasts'];
+    var objTypes = ['ammos','players', 'beasts', 'walls'];
 
     this.Initialize = function () {
       for (ob in objTypes) {
@@ -57,7 +59,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
     this.serverPush = function() {
       if (!this.pushData) {return;}
       if (typeof game_state === 'undefined'){
-        game_state = {players: {}, ammos: {}, beasts: {}};
+        game_state = {players: {}, ammos: {}, beasts: {}, walls : {}};
       }
       lastMessage = this.pushData.lastMessage;
       this.waveCount = this.pushData.waveCount;
@@ -123,14 +125,15 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
       this.game_state['waveCount'] = this.waveCount;
     }
 
-
+    // aka THE BEAST LOOP
     this.checkCollisions = function() {
-      for (b in this.game_state.beasts) {
-        for (p in this.game_state.players) {
+      for (var b in this.game_state.beasts) {
+        var beast = this.game_state.beasts[b];
+        for (var p in this.game_state.players) {
           //distance check for now
-          var d = this.distance(this.game_state.beasts[b],this.game_state.players[p]);
+          var d = this.distance(beast,this.game_state.players[p]);
           if (d < 50){
-            var dmg = this.game_state.beasts[b].attack(d);
+            var dmg = beast.attack(d);
             if (dmg) {
               if (this.game_state.players[p].wound(dmg)){
                 this.dropObject(p,'players');
@@ -138,7 +141,19 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
             }
           }
         }
-        for (a in this.game_state.ammos) {
+        for (var w in this.game_state.walls) {
+          var wall = this.game_state.walls[w];
+          var d = this.distance(beast, wall);
+          if(d < 50) {
+            var dmg = beast.attack(d);
+            if(dmg) {
+              if(wall.wound(dmg)) {
+                this.dropObject(w,'walls');
+              }
+            }
+          }
+        }
+        for (var a in this.game_state.ammos) {
           //distance check for now
           var d = this.distance(this.game_state.beasts[b],this.game_state.ammos[a]);
           if (d < 10){
@@ -197,11 +212,17 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
       beastIndex += 1;
       return beastIndex;
     }
+    
+    this.nextWallId = function() {
+      wallIndex += 1;
+      return wallIndex;
+    }
 
     this.addObject = function(id, type) {
       if (type == 'players'){ this.addPlayer(id); }
       if (type == 'ammos'){ this.addAmmo(id); }
       if (type == 'beasts'){ this.addBeast(id); }
+      if (type === 'walls') {this.addWall(id); }
     }
 
     this.dropObject = function(id, type) {
@@ -230,6 +251,15 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
       this.game_state.beasts[id] = b;
       return id;
     }
+    
+    this.addWall = function(id, pos) {
+      if(id == null) {
+        id = this.nextWallId();
+      }
+      var w = new wall.Wall(id, {x:200,y:200});
+      this.game_state.walls[id] = w;
+      return id;
+    }
 
   this.spawnWave = function(level) {
     var spawnNo = 10;
@@ -244,6 +274,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
       }
       this.addBeast(null,position);
     }
+    this.addWall(null,{x:200,y:200});
   }
 
   this.deleteSweep = function() {

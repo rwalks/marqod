@@ -1,4 +1,4 @@
-﻿function GamePro() {
+function GamePro() {
 
     var _canvas;
     var _canvasContext;
@@ -26,7 +26,7 @@
             _canvasBuffer.height = _canvas.height;
             _canvasBufferContext = _canvasBuffer.getContext('2d');
 
-            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast);
+            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, wall);
             this.waveCount = $("#waveCount");
             return true;
         }
@@ -177,6 +177,16 @@
               _canvasBufferContext.fillStyle = 'rgba(250,0,250,1.0)';
               _canvasBufferContext.font = '20px Helvetica';
               _canvasBufferContext.fillText(am.artAsset(),am.position.x,am.position.y);
+            }
+          }
+        }
+         if (game_engine.game_state.walls != null){
+          for(w in game_engine.game_state.walls){
+            var wall = game_engine.game_state.walls[w];
+            if (wall) {
+              _canvasBufferContext.fillStyle = 'rgba(220,220,220,1.0)';
+              _canvasBufferContext.font = '20px Arial';
+              _canvasBufferContext.fillText(wall.artAsset(),wall.position.x,wall.position.y);
             }
           }
         }

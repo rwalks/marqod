@@ -8,13 +8,13 @@ var eng = require('./GameEngine.js');
 var playerModel = require('./Player.js');
 var weapon = require('./Weapon.js');
 var ammo = require('./Ammo.js');
+var wall = require('./Wall.js');
 var players = {};
 var firstConnect = true;
 
-
 var app = http.createServer(handler),
     io  = require('socket.io').listen(app)
-    app.listen(80);
+    app.listen(3000);
 
 io.set('log level', 1); //reduce lawg)
 
