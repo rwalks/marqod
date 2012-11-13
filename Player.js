@@ -15,6 +15,7 @@ exports.Player = function(pid,server,weapon,ammo) {
   var velocity = this.velocity;
   this.playerWeapon = new weapon.Weapon(ammo);
   var serverTime = server ? 0 : 0;
+  this.maxHealth = 100;
   this.health = 100;
   this.animationFrame = 1;
   var playerDirection = 0;
@@ -98,6 +99,7 @@ exports.Player = function(pid,server,weapon,ammo) {
     //  this[field] = data[field];
    // }
    this.position = data.position;
+   this.health = data.health;
   }
 
   this.click_message = function(type,coords) {

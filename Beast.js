@@ -1,6 +1,6 @@
 (function(exports) {
 
-exports.Beast = function(bid,origin) {
+exports.Beast = function(bid,origin,wave) {
 
   this.id = bid;
   this.position = origin;
@@ -8,12 +8,13 @@ exports.Beast = function(bid,origin) {
   this.velocity = {'x':0,'y':0};
   var maxSpeed = 100;
   this.angle;
-  this.health = 10;
+  this.health = 10+wave;
   this.attackTimer = 0;
   this.attackCooldown = 10;
   this.damage = 5;
   this.range = 15;
   this.animationFrame = 0;
+  this.stunLock = 0;
 
   this.setVelocity = function(){
     this.angle = Math.atan2((this.position.y-this.target.y) , (this.target.x-this.position.x)) + (Math.PI / 2);
@@ -22,15 +23,20 @@ exports.Beast = function(bid,origin) {
   }
 
   this.update = function(lastUpdate, game_state){
+    this.stunLock += (this.stunLock <= 0) ? 0 : -1;
     this.attackTimer += 1;
     this.animationFrame += 1;
-    this.updateBehavior(game_state);
+    if (this.stunLock <= 0){
+      this.updateBehavior(game_state);
+    }
     var deltaT = Date.now() - lastUpdate;
     this.position.x += (this.velocity.x / 1000) * deltaT;
     this.position.y += (this.velocity.y / 1000) * deltaT;
   }
 
   this.wound = function(dmg){
+    this.stunLock = 5;
+    this.velocity = {x:0,y:0};
     this.health -= dmg;
     if (this.health <= 0){
       return true;

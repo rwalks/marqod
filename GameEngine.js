@@ -226,13 +226,13 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
       if (id == null) {
         id = this.nextBeastId();
       }
-      var b = new beast.Beast(id,origin);
+      var b = new beast.Beast(id,origin,this.waveCount);
       this.game_state.beasts[id] = b;
       return id;
     }
 
   this.spawnWave = function(level) {
-    var spawnNo = level*10;
+    var spawnNo = 10;
     for (var i=0; i<spawnNo; i++){
       var position = {};
       if (i % 2 == 0){
@@ -263,7 +263,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM){
           this.spawnWave(this.waveCount);
         }
       }else {
-        this.waveCount = 1;
+        this.waveCount = 0;
       }
     }
   }

@@ -138,14 +138,27 @@
         //clear canvas
         _canvasBufferContext.clearRect(0, 0, _canvas.width, _canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
-        _canvasBufferContext.fillStyle = 'rgba(100,100,100,0.7)';
+        _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.7)';
         _canvasBufferContext.globalCompositeOperation="destination-over";
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
+        _canvasBufferContext.globalCompositeOperation="source-over";
         for(p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
+          //draw player
           _canvasBufferContext.fillStyle = plr.playerColor[p % 6];
           _canvasBufferContext.font = '12px Georgia';
-          _canvasBufferContext.fillText(plr.artAsset(),plr.position.x,plr.position.y);
+          _canvasBufferContext.fillText(plr.artAsset(),plr.position.x-15,plr.position.y);
+          //draw healthbar
+          _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
+          _canvasBufferContext.fillRect(plr.position.x - 13,
+                                        plr.position.y - 20,
+                                        30,
+                                        3);
+          _canvasBufferContext.fillStyle = 'rgba(200,10,10,0.6)';
+          _canvasBufferContext.fillRect(plr.position.x - 13,
+                                        plr.position.y - 20,
+                                        30 * (plr.health / plr.maxHealth),
+                                        3);
         }
         if (game_engine.game_state.ammos != null){
           for(a in game_engine.game_state.ammos){
