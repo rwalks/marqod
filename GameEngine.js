@@ -23,7 +23,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
     var ammoIndex = 1;
     var beastIndex = 1;
     var wallIndex = 1;
-    var waveCount = 1;
+    this.waveCount = 1;
     var gameBounds = {x: WIDTH, y: HEIGHT};
     var collisions;
     this.pushData;
@@ -62,6 +62,8 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
         game_state = {players: {}, ammos: {}, beasts: {}, walls : {}};
       }
       lastMessage = this.pushData.lastMessage;
+      this.waveCount = this.pushData.waveCount;
+
       for (ob in objTypes) {
         for (i in this.pushData[objTypes[ob]]) {
           if (this.pushData[objTypes[ob]][i] == null) {
@@ -87,7 +89,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
     this.Update = function () {
       if (!server) {
         this.serverPush();
-        //this.applyClientBuffer();
+        this.applyClientBuffer();
       }
 
       while (message = this.messageBuffer.pop()){
@@ -102,16 +104,16 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
         this.apply_player_message(message);
       }
       //update objects
-      
       for (ob in objTypes) {
-        for (i in this.game_state[objTypes[ob]]){
-          var pl = this.game_state[objTypes[ob]][i];
+        for (index in this.game_state[objTypes[ob]]){
+          var pl = this.game_state[objTypes[ob]][index];
           if (pl){
             try{
               (objTypes[ob] == 'beasts') ? pl.update(lastUpdate,this.game_state) :
                                            pl.update(lastUpdate);
-              if (objTypes[ob] != 'beasts' && this.checkBounds(pl)){
-                this.dropObject(i,objTypes[ob]);
+              if ((objTypes[ob] != 'beasts' || Object.keys(this.game_state.players).length == 0) &&
+                    this.checkBounds(pl.position)){
+                this.dropObject(index,objTypes[ob]);
               }
             } catch (e) {}
           }
@@ -120,6 +122,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       }
       this.checkCollisions();
       lastUpdate = +new Date;
+      this.game_state['waveCount'] = this.waveCount;
     }
 
     // aka THE BEAST LOOP
@@ -284,10 +287,14 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
   }
 
   this.waveCheck = function(hold){
-    if (!hold && Object.keys(this.game_state.players).length > 0){
-      if (Object.keys(this.game_state.beasts).length <= 0){
-        this.waveCount += 1;
-        this.spawnWave(waveCount);
+    if (!hold) {
+      if (Object.keys(this.game_state.players).length > 0){
+        if (Object.keys(this.game_state.beasts).length <= 0){
+          this.waveCount += 1;
+          this.spawnWave(this.waveCount);
+        }
+      }else {
+        this.waveCount = 1;
       }
     }
   }

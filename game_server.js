@@ -58,7 +58,7 @@ io.sockets.on('connection', function (socket) {
   players[pid] = socket;
   socket.emit('init',{'playerId' : pid})
   if (firstConnect){
-    game_engine.spawnWave(1);
+    engine.spawnWave(1);
     firstConnect = false;
   }
 
@@ -99,9 +99,9 @@ function dropPlayer(socket) {
 }
 
 function tick() {
-  game_engine.deleteSweep();
-  game_engine.waveCheck(firstConnect);
-  game_engine.Update();
+  engine.deleteSweep();
+  engine.waveCheck(firstConnect);
+  engine.Update();
   io.sockets.emit('push',engine.game_state);
 }
 

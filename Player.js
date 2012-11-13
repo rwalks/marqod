@@ -16,6 +16,8 @@ exports.Player = function(pid,server,weapon,ammo) {
   this.playerWeapon = new weapon.Weapon(ammo);
   var serverTime = server ? 0 : 0;
   this.health = 100;
+  this.animationFrame = 1;
+  var playerDirection = 0;
 
   this.update_state = function(msg){
     var ret;
@@ -31,7 +33,9 @@ exports.Player = function(pid,server,weapon,ammo) {
   }
 
   this.update = function(lastUpdate){
+    this.animationFrame += 1;
     var deltaT = Date.now() - lastUpdate;
+    playerDirection = (velocity.x > 0) ? 1 : 0;
     this.position.x += (velocity.x / 1000) * (deltaT + serverTime);
     this.position.y += (velocity.y / 1000) * (deltaT + serverTime);
   }
@@ -68,12 +72,25 @@ exports.Player = function(pid,server,weapon,ammo) {
   }
 
   this.playerColor = {
-    1:'rgba(255,0,0,1.0)',
-    2:'rgba(0,255,0,1.0)',
-    3:'rgba(0,100,255,1.0)',
-    4:'rgba(0,255,255,1.0)',
-    5:'rgba(255,255,0,1.0)',
-    6:'rgba(255,0,255,1.0)'
+    0:'rgba(255,0,0,1.0)',
+    1:'rgba(0,255,0,1.0)',
+    2:'rgba(0,100,255,1.0)',
+    3:'rgba(0,255,255,1.0)',
+    4:'rgba(255,255,0,1.0)',
+    5:'rgba(255,100,200,1.0)'
+  }
+
+  this.artAsset = function() {
+    var imgRet;
+    if (this.animationFrame > 20) {
+      if (this.animationFrame > 40) {
+        this.animationFrame = 0;
+      }
+      imgRet = playerDirection ? "~( o_o)~" : "~(o_o )~";
+    }else{
+      imgRet = playerDirection ? "-( o_o)-" : "-(o_o )-";
+    }
+    return imgRet;
   }
 
   this.serverPush = function (data) {
