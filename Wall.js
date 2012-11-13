@@ -1,13 +1,12 @@
 (function(exports) {
 
-exports.Wall = function(id, pos, vert) {
+exports.Wall = function(id, pos) {
 
   this.id = id;
   this.position = pos;
-  this.vertical = vert;
-  this.health = 10;
+  this.health = 50;
 
-  this.bustup = function(dmg){
+  this.wound = function(dmg){
     this.health -= dmg;
     return this.health <= 0; 
   }
@@ -20,7 +19,15 @@ exports.Wall = function(id, pos, vert) {
   }
 
   this.artAsset = function() {
-    return this.vertical ? '|' : '--';
+    if(this.health > 35) { 
+      return '[ ]';
+    }
+    else if(this.health > 15) {
+      return '[x]';
+    }
+    else {
+      return '[X]';
+    }
   }
 }
 

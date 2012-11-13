@@ -54,11 +54,20 @@ exports.Beast = function(bid,origin) {
           this.target.y = game_state.players[p].position.y;
           min_dist = d;
         }
+    }
+    for (w in game_state.walls){
+      var wall = game_state.walls[w];
+      var d = this.dist(this, wall);
+      if(d < min_dist) {
+        this.target.x = wall.position.x;
+        this.target.y = wall.position.y;
+        min_dist = d;
+      }
+    }
     if (Math.floor(Math.random()*2)){
       this.flock(game_state.beasts);
     }
     this.setVelocity();
-    }
   }
 
   this.flock = function(beasts){
