@@ -28,6 +28,7 @@
 
             game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast);
             this.waveCount = $("#waveCount");
+            this.waveCount.hide();
             return true;
         }
         return false;
@@ -54,6 +55,7 @@
   	//images
         //imagebg = new Image();
         //imagebg.src = 'images/marqod.png';
+        $("#waveCount").show();
     }
 
     this.Run = function () {

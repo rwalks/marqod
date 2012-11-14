@@ -3,14 +3,22 @@ var util = require('util');
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
+var bcrypt = require('bcrypt');
 var exec = require('child_process').exec;
 var eng = require('./GameEngine.js');
 var playerModel = require('./Player.js');
 var weapon = require('./Weapon.js');
 var ammo = require('./Ammo.js');
+var account = require('./Account.js');
 var players = {};
 var firstConnect = true;
 
+var mongo = require('mongodb'),
+      Server = mongo.Server,
+        Db = mongo.Db;
+
+var server = new Server('localhost', 27017, {auto_reconnect: true});
+var db = new Db('marqod', server, {safe:false});
 
 var app = http.createServer(handler),
     io  = require('socket.io').listen(app)
@@ -55,7 +63,7 @@ function handler (req, res) {
 
 io.sockets.on('connection', function (socket) {
   var pid = engine.addPlayer(false);
-  players[pid] = socket;
+  players[socket.id] = {'playerId': pid};
   socket.emit('init',{'playerId' : pid})
   if (firstConnect){
     engine.spawnWave(1);
@@ -69,9 +77,18 @@ io.sockets.on('connection', function (socket) {
   socket.on('disconnect', function(){
     dropPlayer(socket);
   });
+
+  socket.on('login', function(data){
+    handle_login(socket, data);
+  });
 });
 
-console.log('MARQOD LIVES');
+db.open(function(err, db) {
+    if(!err) {
+      db.createCollection('marqod', function(err, collection) {});
+      console.log('MARQOD LIVES');
+            }
+});
 
 function handle_message(socket, msg) {
     if (msg){
@@ -81,18 +98,73 @@ function handle_message(socket, msg) {
    }
 }
 
+function handle_login(socket, msg) {
+  if (msg) {
+    switch(msg.action){
+      case 'login':
+        var res = loginAccount(msg.name, msg.hash);
+        break;
+      case 'create':
+        var res = createAccount(msg.name, msg.hash);
+        break;
+      }
+      if (res){
+        socket.emit('login',{'resp':res});
+      }
+  }
+}
+
+function loginAccount(username,password){
+    db.collection('marqod', function(err, collection) {
+      collection.find({login:username}).toArray(function(err, items) {
+        if (!err && items[0]){
+          bcrypt.hash(password,items[0].salt, function(err, hash){
+            if (!err) {
+              return (hash == items[0].hash)
+            }
+            return false;
+          });
+        }
+      });
+    });
+}
+
+function createAccount(login,password){
+      db.collection('marqod', function(err, collection) {
+        collection.find({login:login}).toArray(function(err, items) {
+          if (!err && items.length == 0){
+            bcrypt.genSalt(10, function(err, salt) {
+              if (!err) {
+                bcrypt.hash(password,salt,function(err, hash){
+                  if (!err){
+                    var data = new account.Account(login,salt,hash);
+                    collection.insert(data, {safe:true}, function(err,result){
+                      if (!err) {
+                        return data;
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+      });
+          return false;
+}
+
 function validatePlayer(socket, id) {
-  return (socket.id == players[id].id)
+  return (id == players[socket.id].playerId)
 }
 
 function dropPlayer(socket) {
   var match;
   for (p in players){
     try {
-      match = (players[p].id == socket.id);
+      match = (p == socket.id);
     } catch (e) {}
     if (match){
-      engine.dropObject(p,'players');
+      engine.dropObject(players[p].playerId,'players');
       players[p] = null;
     }
   }
