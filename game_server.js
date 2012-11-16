@@ -62,23 +62,32 @@ function handler (req, res) {
 
 
 io.sockets.on('connection', function (socket) {
-  var pid = engine.addPlayer(false);
-  players[socket.id] = {'playerId': pid};
-  socket.emit('init',{'playerId' : pid})
-  if (firstConnect){
-    engine.spawnWave(1);
-    firstConnect = false;
-  }
+
+  socket.on('join', function(data){
+    if (players[socket.id]) {
+      var pid = engine.addPlayer(false);
+      players[socket.id].playerId = pid;
+      socket.emit('init',{'playerId' : pid})
+      if (firstConnect){
+        engine.spawnWave(1);
+        firstConnect = false;
+      }
+    }
+  });
 
   socket.on('msg', function(data) {
     handle_message(socket, data);
+  });
+
+  socket.on('inventory', function(data){
+    //fart
   });
 
   socket.on('disconnect', function(){
     dropPlayer(socket);
   });
 
-  socket.on('login', function(data){
+  socket.on('auth', function(data){
     handle_login(socket, data);
   });
 });
@@ -100,36 +109,34 @@ function handle_message(socket, msg) {
 
 function handle_login(socket, msg) {
   if (msg) {
-    switch(msg.action){
-      case 'login':
-        var res = loginAccount(msg.name, msg.hash);
-        break;
-      case 'create':
-        var res = createAccount(msg.name, msg.hash);
-        break;
-      }
-      if (res){
-        socket.emit('login',{'resp':res});
+    if (msg.action == 'login'){
+        loginAccount(msg.username, msg.password, socket);
+    }else{
+        createAccount(msg.username, msg.password, socket);
       }
   }
 }
 
-function loginAccount(username,password){
+function loginAccount(username,password,socket){
     db.collection('marqod', function(err, collection) {
       collection.find({login:username}).toArray(function(err, items) {
         if (!err && items[0]){
           bcrypt.hash(password,items[0].salt, function(err, hash){
             if (!err) {
-              return (hash == items[0].hash)
+              if(hash == items[0].hash){
+                players[socket.id] = items[0];
+                socket.emit('login',items[0])
+              }
             }
-            return false;
           });
         }
       });
     });
+                socket.emit('login',false)
 }
 
-function createAccount(login,password){
+function createAccount(login,password,socket){
+  var resp;
       db.collection('marqod', function(err, collection) {
         collection.find({login:login}).toArray(function(err, items) {
           if (!err && items.length == 0){
@@ -138,9 +145,10 @@ function createAccount(login,password){
                 bcrypt.hash(password,salt,function(err, hash){
                   if (!err){
                     var data = new account.Account(login,salt,hash);
-                    collection.insert(data, {safe:true}, function(err,result){
+                    collection.insert(data, {safe:false}, function(err,result){
                       if (!err) {
-                        return data;
+                        players[socket.id] = data;
+                        socket.emit('login',data)
                       }
                     });
                   }
@@ -150,7 +158,7 @@ function createAccount(login,password){
           }
         });
       });
-          return false;
+  socket.emit('login',false)
 }
 
 function validatePlayer(socket, id) {
@@ -158,16 +166,19 @@ function validatePlayer(socket, id) {
 }
 
 function dropPlayer(socket) {
-  var match;
-  for (p in players){
-    try {
-      match = (p == socket.id);
-    } catch (e) {}
-    if (match){
-      engine.dropObject(players[p].playerId,'players');
-      players[p] = null;
+  try {
+    if(players[socket.id] && players[socket.id].playerId){
+      engine.dropObject(players[socket.id].playerId,'players');
+      delete players[socket.id].playerId;
     }
-  }
+    var accountData = players[socket.id]
+    delete players[socket.id];
+    db.collection('marqod', function(err, collection) {
+      collection.find({login:accountData.login}).toArray(function(err, items) {
+        
+      });
+    });
+  } catch (e) {}
 }
 
 function tick() {
