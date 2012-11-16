@@ -14,10 +14,13 @@ function GamePro() {
     var socket;
     var player;
     var gameActive = false;
+    var banner = new Banner();
+    var uiMode = 'login';
 
     this.Initialize = function () {
         socket = io.connect();
         _canvas = document.getElementById('canvas');
+        uiMode = 'login';
         if (_canvas && _canvas.getContext) {
 
             _canvasContext = _canvas.getContext('2d');
@@ -28,6 +31,7 @@ function GamePro() {
 
             game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, wall);
             this.waveCount = $("#waveCount");
+            this.waveCount.hide();
             return true;
         }
         return false;
@@ -54,6 +58,8 @@ function GamePro() {
   	//images
         //imagebg = new Image();
         //imagebg.src = 'images/marqod.png';
+        $("#waveCount").show();
+        uiMode = "game";
     }
 
     this.Run = function () {
@@ -67,6 +73,15 @@ function GamePro() {
     this.tick = function(){
       game_engine.Update()
       this.Draw();
+    }
+
+    this.submitLogin = function(create){
+      var login_q = $('#login_q').val();
+      var password_q = $('#password_q').val();
+      var act = create ? "create" : "login";
+      if(login_q && password_q){
+        socket.emit('auth',{action:act,username:login_q,password:password_q});
+      }
     }
 
     function LocalEvent (event) {
@@ -102,14 +117,27 @@ function GamePro() {
         console.log("INIT");
         setPlayer(data);
         LoadContent();
-        setInterval(function() {document.proGame.updateMenus()}, 1000 / 10);
         gameActive = true;
+        setInterval(function() {document.proGame.updateMenus()}, 1000 / 10);
       });
+
       socket.on('push', function (data) {
         if (gameActive) {
           game_engine.pushData = data;
         }
       });
+
+      socket.on('login', function (data) {
+      //use data to instantiate new account and ivnentory
+        if (data) {
+          clearMenus();
+          socket.emit('join');
+        }
+      });
+    }
+
+    function clearMenus(){
+      $('#loginForm').hide();
     }
 
     function setPlayer(msg) {
@@ -142,6 +170,10 @@ function GamePro() {
         _canvasBufferContext.globalCompositeOperation="destination-over";
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
+        console.log(uiMode);
+        if (uiMode == "login") {
+            banner.draw(_canvasBufferContext);
+        }
         for(p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
           //draw player
