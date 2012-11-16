@@ -16,6 +16,7 @@ function GamePro() {
     var gameActive = false;
     var banner = new Banner();
     var uiMode = 'login';
+    var salt;
 
     this.Initialize = function () {
         socket = io.connect();
@@ -76,12 +77,26 @@ function GamePro() {
     }
 
     this.submitLogin = function(create){
-      var login_q = $('#login_q').val();
-      var password_q = $('#password_q').val();
+      var login_q = $('#login_q');
+      var password_q = $('#password_q');
       var act = create ? "create" : "login";
-      if(login_q && password_q){
-        socket.emit('auth',{action:act,username:login_q,password:password_q});
+      if(login_q.val() && password_q.val()){
+        var hashPass = hashPassword(password_q.val());
+        socket.emit('auth',{action:act,username:login_q.val(),password:hashPass});
       }
+      login_q.val("");
+      password_q.val("");
+    }
+
+    function hashPassword(str){
+      hash = [];
+      str = str+salt
+      for (i in str){
+        var c = str.charCodeAt(i);
+        c = c ^ salt;
+        hash.push(c);
+      }
+      return hash;
     }
 
     function LocalEvent (event) {
@@ -124,6 +139,12 @@ function GamePro() {
       socket.on('push', function (data) {
         if (gameActive) {
           game_engine.pushData = data;
+        }
+      });
+
+      socket.on('handshake', function (data) {
+        if (data) {
+          salt = data.n;
         }
       });
 
@@ -170,7 +191,6 @@ function GamePro() {
         _canvasBufferContext.globalCompositeOperation="destination-over";
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
-        console.log(uiMode);
         if (uiMode == "login") {
             banner.draw(_canvasBufferContext);
         }

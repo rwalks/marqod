@@ -12,6 +12,7 @@ var ammo = require('./Ammo.js');
 var wall = require('./Wall.js');
 var account = require('./Account.js');
 var players = {};
+var nonces = {};
 var firstConnect = true;
 
 var mongo = require('mongodb'),
@@ -23,7 +24,7 @@ var db = new Db('marqod', server, {safe:false});
 
 var app = http.createServer(handler),
     io  = require('socket.io').listen(app)
-    app.listen(3000);
+    app.listen(80);
 
 io.set('log level', 1); //reduce lawg)
 
@@ -63,6 +64,7 @@ function handler (req, res) {
 
 
 io.sockets.on('connection', function (socket) {
+  sendNonce(socket);
 
   socket.on('join', function(data){
     if (players[socket.id]) {
@@ -108,6 +110,24 @@ function handle_message(socket, msg) {
    }
 }
 
+function sendNonce(socket){
+  var nonce = parseInt(Math.random() * 1000);
+  nonces[socket.id] = nonce;
+  socket.emit('handshake',{n:nonce});
+}
+
+function unhashPassword(socket,hash){
+  pw = "";
+  var n = nonces[socket.id];
+  for (i in hash){
+    var c = hash[i] ^ n;
+    c = String.fromCharCode(c);
+    pw += c;
+  }
+  pw = pw.split(n)[0];
+  return pw;
+}
+
 function handle_login(socket, msg) {
   if (msg) {
     if (msg.action == 'login'){
@@ -119,10 +139,11 @@ function handle_login(socket, msg) {
 }
 
 function loginAccount(username,password,socket){
+    var pw = unhashPassword(socket,password);
     db.collection('marqod', function(err, collection) {
       collection.find({login:username}).toArray(function(err, items) {
         if (!err && items[0]){
-          bcrypt.hash(password,items[0].salt, function(err, hash){
+          bcrypt.hash(pw,items[0].salt, function(err, hash){
             if (!err) {
               if(hash == items[0].hash){
                 players[socket.id] = items[0];
@@ -176,7 +197,9 @@ function dropPlayer(socket) {
     delete players[socket.id];
     db.collection('marqod', function(err, collection) {
       collection.find({login:accountData.login}).toArray(function(err, items) {
-        
+        if (items[0]) {
+          collection.update({login:accountData.login}, accountData, function(){});
+        }
       });
     });
   } catch (e) {}
