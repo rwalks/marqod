@@ -24,16 +24,16 @@ body {
   opacity: 0.6;
 }
 
-#loginForm .loginInput{
-  display: inline-block;
-  padding-left: 2px;
-}
-
 #loginForm {
   text-align: center;
   position: relative;
   top: -400px;
   vertical-align: middle;
+}
+
+#loginForm .loginInput {
+  display: inline-block;
+  padding-left: 2px;
 }
 
 #loginButtonContainer .loginButton {

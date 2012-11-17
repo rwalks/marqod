@@ -19,8 +19,16 @@
   <script src="Banner.js" type="text/javascript"></script> 
 
   <script>
+    document.oncontextmenu = function() {return false;};
     $(function() {
-      $('#canvas').mousedown(function(e) {e.preventDefault();});
+      $('#canvas').mousedown(function(e) {
+        e.preventDefault();
+        
+        if(e.button === 2) {
+          // right click stuff
+        }
+      });
+      
       document.proGame = new GamePro();
       document.proGame.Run();
       $('#login_q').focus();
