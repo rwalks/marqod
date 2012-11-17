@@ -33,6 +33,8 @@ function GamePro() {
             game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, wall);
             this.waveCount = $("#waveCount");
             this.waveCount.hide();
+            this.killCount = $("#killCount");
+            this.killCount.hide();
             return true;
         }
         return false;
@@ -60,6 +62,7 @@ function GamePro() {
         //imagebg = new Image();
         //imagebg.src = 'images/marqod.png';
         $("#waveCount").show();
+        $("#killCount").show();
         uiMode = "game";
     }
 
@@ -104,7 +107,7 @@ function GamePro() {
         var msg = '';
         switch(event.type) {
           case 'click':
-            if (event.target.id == 'canvas'){
+            if (event.target.id == 'canvas' || event.target.class == 'controls'){
               mousePos = getPosition(event);
               msg = player.click_message('click',mousePos);
             }
@@ -151,6 +154,7 @@ function GamePro() {
       socket.on('login', function (data) {
       //use data to instantiate new account and ivnentory
         if (data) {
+          console.log(data);
           clearMenus();
           socket.emit('join');
         }
@@ -251,6 +255,9 @@ function GamePro() {
 
     this.updateMenus = function() {
       this.waveCount.text("WAVE: " + game_engine.waveCount);
+      if (game_engine.game_state.players[player.id]){
+        this.killCount.text("KILLS: " + game_engine.game_state.players[player.id].kills);
+      }
     }
 
 }

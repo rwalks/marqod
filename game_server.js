@@ -146,8 +146,9 @@ function loginAccount(username,password,socket){
           bcrypt.hash(pw,items[0].salt, function(err, hash){
             if (!err) {
               if(hash == items[0].hash){
-                players[socket.id] = items[0];
-                socket.emit('login',items[0])
+                var acc = new account.Account(items[0]);
+                players[socket.id] = acc; 
+                socket.emit('login', acc.sendData())
               }
             }
           });
@@ -158,19 +159,19 @@ function loginAccount(username,password,socket){
 }
 
 function createAccount(login,password,socket){
-  var resp;
+    var pw = unhashPassword(socket,password);
       db.collection('marqod', function(err, collection) {
         collection.find({login:login}).toArray(function(err, items) {
           if (!err && items.length == 0){
             bcrypt.genSalt(10, function(err, salt) {
               if (!err) {
-                bcrypt.hash(password,salt,function(err, hash){
+                bcrypt.hash(pw,salt,function(err, hash){
                   if (!err){
-                    var data = new account.Account(login,salt,hash);
+                    var data = new account.Account({login:login,salt:salt,hash:hash});
                     collection.insert(data, {safe:false}, function(err,result){
                       if (!err) {
                         players[socket.id] = data;
-                        socket.emit('login',data)
+                        socket.emit('login',data.sendData())
                       }
                     });
                   }
@@ -189,11 +190,15 @@ function validatePlayer(socket, id) {
 
 function dropPlayer(socket) {
   try {
+    var accountData = players[socket.id];
     if(players[socket.id] && players[socket.id].playerId){
+      var highWave = engine.game_state.players[accountData.playerId].highWave;
+      accountData.maxWave = (highWave > accountData.maxWave) ? highWave : accountData.maxWave;
+      var kills = engine.game_state.players[accountData.playerId].kills;
+      accountData.maxKills = (kills > accountData.maxKills) ? kills : accountData.maxKills;
       engine.dropObject(players[socket.id].playerId,'players');
       delete players[socket.id].playerId;
     }
-    var accountData = players[socket.id]
     delete players[socket.id];
     db.collection('marqod', function(err, collection) {
       collection.find({login:accountData.login}).toArray(function(err, items) {

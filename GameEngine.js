@@ -159,11 +159,12 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
           if (d < 10){
             var dmg = this.game_state.ammos[a].damage();
             if (dmg) {
+              if (this.game_state.beasts[b].wound(dmg[0])){
+                this.game_state.players[this.game_state.ammos[a].playerId].kills += 1;
+                this.dropObject(b,'beasts');
+              }
               if (dmg[1]) {
                 this.dropObject(a,'ammos');
-              }
-              if (this.game_state.beasts[b].wound(dmg[0])){
-                this.dropObject(b,'beasts');
               }
             }
           }
@@ -212,7 +213,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       beastIndex += 1;
       return beastIndex;
     }
-    
+
     this.nextWallId = function() {
       wallIndex += 1;
       return wallIndex;
@@ -274,7 +275,14 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       }
       this.addBeast(null,position);
     }
-    this.addWall(null,{x:200,y:200});
+    this.updatePlayersWave();
+    //this.addWall(null,{x:450,y:400});
+  }
+
+  this.updatePlayersWave = function(){
+    for (p in this.game_state.players){
+      this.game_state.players[p].highWave = this.waveCount;
+    }
   }
 
   this.deleteSweep = function() {

@@ -1,19 +1,19 @@
 (function(exports) {
 
-exports.Account = function(login,salt,hash) {
+exports.Account = function(params) {
 
-  this.login = login;
-  this.salt = salt;
-  this.hash = hash;
-  this.inventory = {};
-  this.highWave = 0;
-  this.mostKills = 0;
+  this.login = params.login;
+  this.salt = params.salt;
+  this.hash = params.hash;
+  this.inventory = params.inventory;
+  this.maxWave = params.maxWave ? params.maxWave : 0;
+  this.maxKills = params.maxKills ? params.maxKills : 0;
   this.sendData = function(){
     return {
       login:this.login,
       inventory:this.inventory,
-      highWave:this.highWave,
-      mostKills:this.mostKills
+      maxWave:this.maxWave,
+      maxKills:this.maxKills
     }
   }
 

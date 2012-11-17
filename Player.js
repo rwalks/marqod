@@ -13,11 +13,13 @@ exports.Player = function(pid,server,weapon,ammo) {
   this.position.y = 100;
   this.velocity = {x:0,y:0};
   var velocity = this.velocity;
-  this.playerWeapon = new weapon.Weapon(ammo);
+  this.playerWeapon = new weapon.Weapon(this.id,ammo);
   var serverTime = server ? 0 : 0;
   this.maxHealth = 100;
   this.health = 100;
   this.animationFrame = 1;
+  this.highWave;
+  this.kills = 0;
   var playerDirection = 0;
 
   this.update_state = function(msg){
@@ -100,6 +102,7 @@ exports.Player = function(pid,server,weapon,ammo) {
    // }
    this.position = data.position;
    this.health = data.health;
+   this.kills = data.kills;
   }
 
   this.click_message = function(type,coords) {

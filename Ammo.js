@@ -1,8 +1,9 @@
 (function(exports) {
 
-exports.Ammo = function(id,origin,targ) {
+exports.Ammo = function(id,origin,targ,pid) {
 
   var id
+  this.playerId = pid;
   this.position = origin;
   this.target = targ;
   this.velocity = {};
@@ -36,6 +37,7 @@ exports.Ammo = function(id,origin,targ) {
    // }
    this.position = data.position;
    this.velocity = data.velocity;
+   this.playerId = data.playerId;
   }
 
   this.setVelocity();

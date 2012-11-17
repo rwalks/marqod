@@ -1,6 +1,6 @@
 (function(exports) {
 
-exports.Weapon = function(ammoM) {
+exports.Weapon = function(pid,ammoM) {
   var ammo = ammoM;
   if (!(typeof require === 'undefined')){
     ammo = require('./Ammo.js');
@@ -9,10 +9,11 @@ exports.Weapon = function(ammoM) {
   var type;
   var lastFire = +new Date;
   var refireRate = 00;
+  this.playerId = pid;
 
   this.fire = function(pos, coords) {
     if ((Date.now() - lastFire) > refireRate){
-      var am = new ammo.Ammo(0, pos, coords);
+      var am = new ammo.Ammo(0, pos, coords, pid); 
       lastFire = Date.now();
       return [am];
     }

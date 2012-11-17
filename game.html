@@ -15,7 +15,7 @@
   <script src="Wall.js" type="text/javascript"></script>
   <script src="Banner.js" type="text/javascript"></script>
   <style>
-  #image, #canvas, #controls {
+  #image, #canvas, #controls, #counters {
       user-select: none;
           -ms-user-select: none;
           -webkit-user-select: none;
@@ -53,11 +53,14 @@
 
    </canvas>
    <style>
-     #waveCount{
+
+     #counters{
        top: 0px;
        right: 340px;
        position: absolute;
        width: 100%;
+     }
+     #waveCount, #killCount{
        font-family: 'georgia';
        font-size: 24px;
        opacity: 0.6;
@@ -74,8 +77,14 @@
        width:10em;text-align:center;display:inline-block;margin-right:1em;
      }
    </style>
-     <div id="waveCount">
-       WAVE: 1
+   <div id="counters" class="controls">
+       <div id="waveCount" class="controls">
+         WAVE: 1
+       </div>
+        </br>
+       <div id="killCount" class="controls">
+         KILLS: 0
+       </div>
      </div>
      <form class="search" id="loginForm" action="">
        <input class="loginInput" value="username" type="text" id="login_q"/><br><input class="loginInput" value="password" type="password" id="password_q"/></br></br>
