@@ -35,6 +35,8 @@ function GamePro() {
             this.waveCount.hide();
             this.killCount = $("#killCount");
             this.killCount.hide();
+            this.mainMenu = $("#mainMenu");
+            this.mainMenu.hide();
             return true;
         }
         return false;
@@ -77,6 +79,14 @@ function GamePro() {
     this.tick = function(){
       game_engine.Update()
       this.Draw();
+    }
+
+    this.menuClick = function(action){
+      switch(action){
+        case 'start':
+          socket.emit('join');
+          break;
+      }
     }
 
     this.submitLogin = function(create){
@@ -132,7 +142,7 @@ function GamePro() {
         setInterval(function() {document.proGame.tick()}, 1000 / 60);
       });
       socket.on('init', function (data) {
-        console.log("INIT");
+        clearMenus();
         setPlayer(data);
         LoadContent();
         gameActive = true;
@@ -154,15 +164,17 @@ function GamePro() {
       socket.on('login', function (data) {
       //use data to instantiate new account and ivnentory
         if (data) {
-          console.log(data);
           clearMenus();
-          socket.emit('join');
+          $('#mainMenu').show();
         }
       });
     }
 
     function clearMenus(){
       $('#loginForm').hide();
+      $('#mainMenu').hide();
+      $("#waveCount").hide();
+      $("#killCount").hide();
     }
 
     function setPlayer(msg) {
@@ -195,7 +207,7 @@ function GamePro() {
         _canvasBufferContext.globalCompositeOperation="destination-over";
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
-        if (uiMode == "login") {
+        if (uiMode == "login" || uiMode == "menu") {
             banner.draw(_canvasBufferContext);
         }
         for(p in game_engine.game_state.players){

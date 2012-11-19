@@ -18,6 +18,13 @@ body {
   left: 10px;
 }
 
+#mainMenu{
+  top : -400px;
+  text-align: center;
+  position: relative;
+  vertical-align: middle;
+}
+
 #waveCount, #killCount {
   font-family: 'georgia';
   font-size: 24px;
