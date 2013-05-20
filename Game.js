@@ -37,6 +37,8 @@ function GamePro() {
             this.killCount.hide();
             this.mainMenu = $("#mainMenu");
             this.mainMenu.hide();
+            this.inventoryMenu = $("#inventory");
+            this.inventoryMenu.hide();
             return true;
         }
         return false;
@@ -86,7 +88,22 @@ function GamePro() {
         case 'start':
           socket.emit('join');
           break;
+        case 'equip':
+          clearMenus();
+          showInventory();
+          break;
       }
+    }
+
+    function showInventory(){
+      weapHtml = $("#invSelect1").html()
+      for (i in inventory.weapons){
+        weap = inventory.weapons[i];
+        weapHtml += "<option value='"+weap.name+"'>"+weap.name+"</option>"
+      }
+      $("#invSelect1").html(weapHtml);
+      $('#inventory').show();
+      
     }
 
     this.submitLogin = function(create){
@@ -164,10 +181,19 @@ function GamePro() {
       socket.on('login', function (data) {
       //use data to instantiate new account and ivnentory
         if (data) {
-          clearMenus();
-          $('#mainMenu').show();
+          inventory = data.inventory;
+          maxKills = data.maxKills;
+          maxWave = data.maxWave;
+          document.proGame.homeMenu();
         }
       });
+    }
+
+    this.homeMenu = function(){
+      if (!gameActive){
+        clearMenus();
+        $('#mainMenu').show();
+      }
     }
 
     function clearMenus(){
@@ -175,6 +201,7 @@ function GamePro() {
       $('#mainMenu').hide();
       $("#waveCount").hide();
       $("#killCount").hide();
+      $("#inventory").hide();
     }
 
     function setPlayer(msg) {

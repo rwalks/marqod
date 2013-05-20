@@ -53,6 +53,35 @@
 	    <a class="loginButton" onclick='document.proGame.submitLogin(true);'>[ new ]</a>
 	  </div>
 	</form>
+  <center>
+ <div id="inventory">
+  <table id = "inventoryTable">
+    <tr>
+      <td> <div class="invBox" id = "invLabel1">Primary</div></td>
+      <td><div class="invBox" id = "invLabel2">Acc. 1</div></td>
+      <td><div class="invBox" id = "invLabel3">Acc. 2</div></td>
+      <td><div class="invBox" id = "invLabel4">Acc. 3</div></td>
+    </tr>
+    <tr>
+      <td><select id="invSelect1">
+          <option selected value="">~~~</option>
+      </select></td>
+      <td><select id="invSelect2">
+          <option selected value="">~~~</option>
+      </select></td>
+      <td><select id="invSelect3">
+          <option selected value="">~~~</option>
+      </select></td>
+      <td><select id="invSelect4">
+          <option selected value="">~~~</option>
+      </select></td>
+    </tr>
+  </table>
+      </br></br></br>
+	    <a class="loginButton" onclick='document.proGame'>[ Apply ]</a>
+	    <a class="loginButton" onclick='document.proGame.homeMenu();'>[ Back ]</a>
+ </div>
+  </center>
  <div id = "mainMenu">
   <a class="menuButton" onClick="document.proGame.menuClick('start');">[ Start Game ] </a></br></br>
   <a class="menuButton" onClick="document.proGame.menuClick('equip');">[ Equipment ]</a></br></br>

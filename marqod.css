@@ -25,6 +25,26 @@ body {
   vertical-align: middle;
 }
 
+#inventory{
+  top : -400px;
+  text-align: center;
+  position: relative;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+table {
+}
+
+td {
+  padding: 5px;
+}
+
+.invBox{
+  border-style:ridge;
+  border-width:5px;
+}
+
 #waveCount, #killCount {
   font-family: 'georgia';
   font-size: 24px;
