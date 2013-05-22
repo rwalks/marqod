@@ -64,6 +64,7 @@ function handler (req, res) {
 
 
 io.sockets.on('connection', function (socket) {
+  check_cookie(socket);
   sendNonce(socket);
 
   socket.on('join', function(data){
@@ -86,8 +87,12 @@ io.sockets.on('connection', function (socket) {
     //fart
   });
 
+  socket.on('logout', function(){
+    dropPlayer(socket, true);
+  });
+
   socket.on('disconnect', function(){
-    dropPlayer(socket);
+    dropPlayer(socket, false);
   });
 
   socket.on('auth', function(data){
@@ -114,6 +119,32 @@ function sendNonce(socket){
   var nonce = parseInt(Math.random() * 1000);
   nonces[socket.id] = nonce;
   socket.emit('handshake',{n:nonce});
+}
+
+function check_cookie(socket){
+  if (socket.handshake.headers.cookie){
+    cookieArray = socket.handshake.headers.cookie.split(/;\ |;/);
+    cookieHash = {};
+    for(c in cookieArray) {
+      kv = cookieArray[c].split('=');
+      cookieHash[kv[0]] = kv[1];
+    }
+    if (cookieHash['marqod']){
+     db.collection('marqod', function(err, collection){
+       collection.find({session:decodeURIComponent(cookieHash['marqod'])}).toArray(function(err, items) {
+         if (!err && items[0]){
+           var acc = new account.Account(items[0]);
+           if (acc.valid_session()){
+             players[socket.id] = acc;
+             socket.emit('login', acc.sendData())
+           }
+         }else{
+  //no session
+         }
+       });
+     });
+    }
+  }
 }
 
 function unhashPassword(socket,hash){
@@ -147,8 +178,17 @@ function loginAccount(username,password,socket){
             if (!err) {
               if(hash == items[0].hash){
                 var acc = new account.Account(items[0]);
-                players[socket.id] = acc; 
-                socket.emit('login', acc.sendData())
+                generate_session(acc);
+                collection.find({login:acc.login}).toArray(function(err, items) {
+                  if (items[0]) {
+                    collection.update({login:acc.login}, acc, function(err,result){
+                            if (!err) {
+                              players[socket.id] = acc;
+                              socket.emit('login',acc.sendData())
+                            }
+                    });
+                  }
+                });
               }
             }
           });
@@ -168,6 +208,7 @@ function createAccount(login,password,socket){
                 bcrypt.hash(pw,salt,function(err, hash){
                   if (!err){
                     var data = new account.Account({login:login,salt:salt,hash:hash});
+                    generate_session(data);
                     collection.insert(data, {safe:false}, function(err,result){
                       if (!err) {
                         players[socket.id] = data;
@@ -188,9 +229,19 @@ function validatePlayer(socket, id) {
   return (id == players[socket.id].playerId)
 }
 
-function dropPlayer(socket) {
+function generate_session(account) {
+  ts = new Date().getTime();
+  bcrypt.genSalt(10, function(err,salt){
+    account.session = '' + ts + salt;
+  });
+}
+
+function dropPlayer(socket, drop_session) {
   try {
     var accountData = players[socket.id];
+    if (drop_session){
+      accountData.session = null;
+    }
     if(players[socket.id] && players[socket.id].playerId){
       var highWave = engine.game_state.players[accountData.playerId].highWave;
       accountData.maxWave = (highWave > accountData.maxWave) ? highWave : accountData.maxWave;

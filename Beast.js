@@ -27,7 +27,7 @@ exports.Beast = function(bid,origin,wave) {
     this.attackTimer += 1;
     this.animationFrame += 1;
     if (this.stunLock <= 0){
-      this.updateBehavior(game_state);
+     // this.updateBehavior(game_state);
     }
     var deltaT = Date.now() - lastUpdate;
     this.position.x += (this.velocity.x / 1000) * deltaT;

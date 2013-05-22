@@ -17,10 +17,12 @@ function GamePro() {
     var banner = new Banner();
     var uiMode = 'login';
     var salt;
+    var canvasOffset = {'x':0,'y':0};
 
     this.Initialize = function () {
         socket = io.connect();
         _canvas = document.getElementById('canvas');
+        _canvas.tabIndex = 1;//focus
         uiMode = 'login';
         if (_canvas && _canvas.getContext) {
 
@@ -45,12 +47,6 @@ function GamePro() {
     }
 
     function LoadContent () {
-        var cookie = $.cookie("progame");
-        if (cookie != null) {
-            //user already finished some maps
-        } else {
-            $.cookie("progame", 1, { expires: 365 });
-        }
         $(document).bind('keyup', function (event) {
             LocalEvent(event);
         });
@@ -92,6 +88,9 @@ function GamePro() {
           clearMenus();
           showInventory();
           break;
+        case 'logout':
+          socket.emit('logout');
+          location.reload();
       }
     }
 
@@ -181,6 +180,13 @@ function GamePro() {
       socket.on('login', function (data) {
       //use data to instantiate new account and ivnentory
         if (data) {
+          var cookie = $.cookie("marqod");
+          console.log(data);
+          if (cookie == data.session) {
+            //fresh cookie
+          } else {
+            $.cookie("marqod", data.session, { expires: 3 });
+          }
           inventory = data.inventory;
           maxKills = data.maxKills;
           maxWave = data.maxWave;
@@ -227,6 +233,8 @@ function GamePro() {
     };
 
     this.Draw = function () {
+     //   canvasOffset = player.deltaPos;
+     //   _canvasBufferContext.translate(player.deltaPos.x, player.deltaPod.y);
         //clear canvas
         _canvasBufferContext.clearRect(0, 0, _canvas.width, _canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
