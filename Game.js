@@ -128,6 +128,20 @@ function GamePro() {
       return hash;
     }
 
+    function addCanvasOffset (pos){
+      ret = {};
+      ret.x = pos.x + canvasOffset.x;
+      ret.y = pos.y + canvasOffset.y;
+      return ret;
+    }
+
+    function subCanvasOffset (pos){
+      ret = {};
+      ret.x = pos.x - canvasOffset.x;
+      ret.y = pos.y - canvasOffset.y;
+      return ret;
+    }
+
     function LocalEvent (event) {
       if (event != null){
         var msg = '';
@@ -135,7 +149,7 @@ function GamePro() {
           case 'click':
             if (event.target.id == 'canvas' || event.target.class == 'controls'){
               mousePos = getPosition(event);
-              msg = player.click_message('click',mousePos);
+              msg = player.click_message('click',subCanvasOffset(mousePos));
             }
             break;
           case 'keydown':
@@ -181,7 +195,6 @@ function GamePro() {
       //use data to instantiate new account and ivnentory
         if (data) {
           var cookie = $.cookie("marqod");
-          console.log(data);
           if (cookie == data.session) {
             //fresh cookie
           } else {
@@ -240,26 +253,37 @@ function GamePro() {
         _canvasBufferContext.globalCompositeOperation="source-over";
         _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.7)';
         _canvasBufferContext.globalCompositeOperation="destination-over";
-        _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
+        bg = new Image();
+        bg.src = "bg_b1.png"
+        _canvasBufferContext.drawImage(bg,0,0);
+        //_canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
         if (uiMode == "login" || uiMode == "menu") {
             banner.draw(_canvasBufferContext);
         }
+        if (player){
+          plr = game_engine.game_state.players[player.id];
+          if (plr){
+            canvasOffset.x = 400 - plr.position.x;
+            canvasOffset.y = 350 - plr.position.y;
+          }
+        }
         for(p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
+          pos = addCanvasOffset(plr.position);
           //draw player
           _canvasBufferContext.fillStyle = plr.playerColor[p % 6];
           _canvasBufferContext.font = '12px Georgia';
-          _canvasBufferContext.fillText(plr.artAsset(),plr.position.x-15,plr.position.y);
+          _canvasBufferContext.fillText(plr.artAsset(),pos.x-15,pos.y);
           //draw healthbar
           _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
-          _canvasBufferContext.fillRect(plr.position.x - 13,
-                                        plr.position.y - 20,
+          _canvasBufferContext.fillRect(pos.x - 13,
+                                        pos.y - 20,
                                         30,
                                         3);
           _canvasBufferContext.fillStyle = 'rgba(200,10,10,0.6)';
-          _canvasBufferContext.fillRect(plr.position.x - 13,
-                                        plr.position.y - 20,
+          _canvasBufferContext.fillRect(pos.x - 13,
+                                        pos.y - 20,
                                         30 * (plr.health / plr.maxHealth),
                                         3);
         }
@@ -267,9 +291,10 @@ function GamePro() {
           for(a in game_engine.game_state.ammos){
             var am = game_engine.game_state.ammos[a];
             if (am) {
+              pos = addCanvasOffset(am.position);
               _canvasBufferContext.font = '20px Georgia';
               _canvasBufferContext.fillStyle = 'rgba(250,0,50,1.0)';
-              _canvasBufferContext.fillText("*",am.position.x,am.position.y);
+              _canvasBufferContext.fillText("*",pos.x,pos.y);
             }
           }
         }
@@ -277,9 +302,10 @@ function GamePro() {
           for(a in game_engine.game_state.beasts){
             var am = game_engine.game_state.beasts[a];
             if (am) {
+              pos = addCanvasOffset(am.position);
               _canvasBufferContext.fillStyle = 'rgba(250,0,250,1.0)';
               _canvasBufferContext.font = '20px Helvetica';
-              _canvasBufferContext.fillText(am.artAsset(),am.position.x,am.position.y);
+              _canvasBufferContext.fillText(am.artAsset(),pos.x,pos.y);
             }
           }
         }

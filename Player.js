@@ -9,8 +9,8 @@ exports.Player = function(pid,server,weapon,ammo) {
 
   this.id = pid;
   this.position = {};
-  this.position.x = 100;
-  this.position.y = 100;
+  this.position.x = 4000;
+  this.position.y = 4000;
   this.velocity = {x:0,y:0};
   var velocity = this.velocity;
   this.playerWeapon = new weapon.Weapon(this.id,ammo);
@@ -21,7 +21,6 @@ exports.Player = function(pid,server,weapon,ammo) {
   this.highWave;
   this.kills = 0;
   var playerDirection = 0;
-  this.deltaPos = {}; // for canvas offset
 
   this.update_state = function(msg){
     var ret;
@@ -42,10 +41,8 @@ exports.Player = function(pid,server,weapon,ammo) {
     playerDirection = (velocity.x > 0) ? 1 : 0;
     dX = (velocity.x / 1000) * (deltaT + serverTime);
     this.position.x += dX;
-    this.deltaPos.x = dX;
     dY = (velocity.y / 1000) * (deltaT + serverTime);
     this.position.y += dY;
-    this.deltaPos.y = dY;
   }
 
   this.click = function(coords){

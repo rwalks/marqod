@@ -1,5 +1,5 @@
-var WIDTH = 800;
-var HEIGHT = 700;
+var WIDTH = 8000;
+var HEIGHT = 8000;
 
 (function(exports) {
 
