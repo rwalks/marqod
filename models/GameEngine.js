@@ -3,19 +3,19 @@ var HEIGHT = 700;
 
 (function(exports) {
 
-exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
-  //support browser and server
+exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM){
+    game_engine = this;
     var server = serv;
     var playerModel = server ? require('./Player.js') : playerM;
     var ammo = server ? require('./Ammo.js') : ammoM;
     var weapon = server ? require('./Weapon.js') : weaponM;
     var beast = server ? require('./Beast.js') : beastM;
-    var wall = server ? require('./Wall.js') : wallM;
+    var terrain = server ? require('./Terrain.js') : terrainM;
 
     this.game_state = {};
     this.messageBuffer = [];
     this.clientBuffer = [];
-    game_engine = this;
+
     var lastUpdate = +new Date;
     var lastMessage = +new Date;
     var deleteQueue = {'players': [], 'ammos': [], 'beasts': [], 'walls': []};
@@ -27,6 +27,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
     var gameBounds = {x: WIDTH, y: HEIGHT};
     var collisions;
     this.pushData;
+    this.terrain = new terrain.Terrain(WIDTH,HEIGHT);
     var objTypes = ['ammos','players', 'beasts', 'walls'];
 
     this.Initialize = function () {
@@ -111,10 +112,6 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
             try{
               (objTypes[ob] == 'beasts') ? pl.update(lastUpdate,this.game_state) :
                                            pl.update(lastUpdate);
-              if ((objTypes[ob] != 'beasts' || Object.keys(this.game_state.players).length == 0) &&
-                    this.checkBounds(pl.position)){
-                this.dropObject(index,objTypes[ob]);
-              }
             } catch (e) {}
           }
 
@@ -172,15 +169,6 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       }
     }
 
-    this.checkBounds = function(position){
-      for (i in position){
-        if (position[i] < 0 || position[i] > gameBounds[i]){
-          return true;
-        }
-      }
-      return false;
-    }
-
     this.getPlayer = function(player_id) {
       return this.game_state.players[player_id];
     }
@@ -212,11 +200,6 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
     this.nextBeastId = function() {
       beastIndex += 1;
       return beastIndex;
-    }
-
-    this.nextWallId = function() {
-      wallIndex += 1;
-      return wallIndex;
     }
 
     this.addObject = function(id, type) {
@@ -252,38 +235,6 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       this.game_state.beasts[id] = b;
       return id;
     }
-    
-    this.addWall = function(id, pos) {
-      if(id == null) {
-        id = this.nextWallId();
-      }
-      var w = new wall.Wall(id, {x:200,y:200});
-      this.game_state.walls[id] = w;
-      return id;
-    }
-
-  this.spawnWave = function(level) {
-    var spawnNo = 10;
-    for (var i=0; i<spawnNo; i++){
-      var position = {};
-      if (i % 2 == 0){
-        position.x = randomNumber(0,WIDTH);
-        position.y = (i % 3 == 0) ? HEIGHT + 10 : -10;
-      }else {
-        position.x = (i % 3 == 0) ? WIDTH + 10 : -10;
-        position.y = randomNumber(0,HEIGHT);
-      }
-      this.addBeast(null,position);
-    }
-    this.updatePlayersWave();
-    //this.addWall(null,{x:450,y:400});
-  }
-
-  this.updatePlayersWave = function(){
-    for (p in this.game_state.players){
-      this.game_state.players[p].highWave = this.waveCount;
-    }
-  }
 
   this.deleteSweep = function() {
     for (i in objTypes){
@@ -294,42 +245,11 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
     }
   }
 
-  this.waveCheck = function(hold){
-    if (!hold) {
-      if (Object.keys(this.game_state.players).length > 0){
-        if (Object.keys(this.game_state.beasts).length <= 0){
-          this.waveCount += 1;
-          this.spawnWave(this.waveCount);
-        }
-      }else {
-        this.waveCount = 0;
-      }
-    }
-  }
-
   this.distance = function(obj1, obj2) {
     if (obj1 && obj2){
       return Math.sqrt(Math.pow((obj2.position.x - obj1.position.x),2)+Math.pow((obj2.position.y-obj1.position.y),2));
     }
   }
-}
-
-function point_in_polygon(cx,cy,points) {
-  within = false;
-  for (i=0;i<points.length;i++){
-    p1 = points.shift();
-    p2 = points[0];
-    if (((p1.y <= cy && cy < p2.y) || (p2.y <= cy && cy < p1.y))
-    && (cx < (p2.x - p1.x) * (cy - p1.y) / (p2.y - p1.y) + p1.x))
-     {within = !within;}
-    points.push(p1);
-  }
-  return within;
-}
-
-
-function randomNumber(min,max){
-  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 }) (typeof exports === 'undefined'? this['engine']={}: exports);

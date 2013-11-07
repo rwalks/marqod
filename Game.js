@@ -30,7 +30,7 @@ function GamePro() {
             _canvasBuffer.height = _canvas.height;
             _canvasBufferContext = _canvasBuffer.getContext('2d');
 
-            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, wall);
+            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, terrain);
             this.waveCount = $("#waveCount");
             this.waveCount.hide();
             this.killCount = $("#killCount");
@@ -230,14 +230,14 @@ function GamePro() {
         //clear canvas
         _canvasBufferContext.clearRect(0, 0, _canvas.width, _canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
-        _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.7)';
+        _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.1)';
         _canvasBufferContext.globalCompositeOperation="destination-over";
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
         if (uiMode == "login" || uiMode == "menu") {
             banner.draw(_canvasBufferContext);
         }
-        for(p in game_engine.game_state.players){
+        for(var p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
           //draw player
           _canvasBufferContext.fillStyle = plr.playerColor[p % 6];
@@ -255,11 +255,12 @@ function GamePro() {
                                         30 * (plr.health / plr.maxHealth),
                                         3);
         }
+        //draw ammos
         if (game_engine.game_state.ammos != null){
           for(a in game_engine.game_state.ammos){
             var am = game_engine.game_state.ammos[a];
             if (am) {
-              _canvasBufferContext.font = '20px Georgia';
+              _canvasBufferContext.font = '20px georgia';
               _canvasBufferContext.fillStyle = 'rgba(250,0,50,1.0)';
               _canvasBufferContext.fillText("*",am.position.x,am.position.y);
             }
@@ -275,16 +276,16 @@ function GamePro() {
             }
           }
         }
-         if (game_engine.game_state.walls != null){
-          for(w in game_engine.game_state.walls){
-            var wall = game_engine.game_state.walls[w];
-            if (wall) {
-              _canvasBufferContext.fillStyle = 'rgba(220,220,220,1.0)';
-              _canvasBufferContext.font = '20px Arial';
-              _canvasBufferContext.fillText(wall.artAsset(),wall.position.x,wall.position.y);
-            }
-          }
+        //draw surface terrain
+        _canvasBufferContext.fillStyle = 'rgba(0,250,0,1.0)';
+        _canvasBufferContext.beginPath();
+        _canvasBufferContext.moveTo(0,800);
+        for(var x in game_engine.terrain.surfaceMap){
+          _canvasBufferContext.lineTo(x,game_engine.terrain.surfaceMap[x]);
         }
+        _canvasBufferContext.lineTo(800,800);
+        _canvasBufferContext.closePath();
+        _canvasBufferContext.fill();
         //this.draw_commandBar();
         //draw buffer on screen
         _canvasContext.clearRect(0, 0, _canvas.width, _canvas.height);

@@ -5,12 +5,11 @@ var fs = require('fs');
 var path = require('path');
 var bcrypt = require('bcrypt');
 var exec = require('child_process').exec;
-var eng = require('./GameEngine.js');
-var playerModel = require('./Player.js');
-var weapon = require('./Weapon.js');
-var ammo = require('./Ammo.js');
-var wall = require('./Wall.js');
-var account = require('./Account.js');
+var eng = require('./models/GameEngine.js');
+var playerModel = require('./models/Player.js');
+var weapon = require('./models/Weapon.js');
+var ammo = require('./models/Ammo.js');
+var account = require('./models/Account.js');
 var players = {};
 var nonces = {};
 var firstConnect = true;
@@ -72,7 +71,7 @@ io.sockets.on('connection', function (socket) {
       players[socket.id].playerId = pid;
       socket.emit('init',{'playerId' : pid})
       if (firstConnect){
-        engine.spawnWave(1);
+        //engine.spawnWave(1);
         firstConnect = false;
       }
     }
@@ -212,7 +211,6 @@ function dropPlayer(socket) {
 
 function tick() {
   engine.deleteSweep();
-  engine.waveCheck(firstConnect);
   engine.Update();
   io.sockets.emit('push',engine.game_state);
 }
