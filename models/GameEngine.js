@@ -1,9 +1,9 @@
-var WIDTH = 800;
+var WIDTH = 8000;
 var HEIGHT = 700;
 
 (function(exports) {
 
-exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM){
+exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM, playerImg){
     game_engine = this;
     var server = serv;
     var playerModel = server ? require('./Player.js') : playerM;
@@ -16,6 +16,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM){
     this.messageBuffer = [];
     this.clientBuffer = [];
 
+    this.player_img = playerImg;
     var lastUpdate = +new Date;
     var lastMessage = +new Date;
     var deleteQueue = {'players': [], 'ammos': [], 'beasts': [], 'walls': []};
@@ -41,7 +42,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM){
         playerIndex += 1;
         pid = playerIndex;
       }
-      var p = new playerModel.Player(pid, server, weapon, ammo);
+      var p = new playerModel.Player(pid, server, weapon, ammo, this.player_img);
       this.game_state.players[pid] = p;
       return pid;
     }
@@ -87,6 +88,10 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM){
       }
     }
 
+    this.setTerrain = function(terrainM){
+      this.terrain.surfaceMap = terrainM;
+    }
+
     this.Update = function () {
       if (!server) {
         this.serverPush();
@@ -110,7 +115,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM){
           var pl = this.game_state[objTypes[ob]][index];
           if (pl){
             try{
-              (objTypes[ob] == 'beasts') ? pl.update(lastUpdate,this.game_state) :
+              (objTypes[ob] == 'players') ? pl.update(lastUpdate,this.terrain.surfaceMap,[]) :
                                            pl.update(lastUpdate);
             } catch (e) {}
           }

@@ -69,11 +69,12 @@ io.sockets.on('connection', function (socket) {
     if (players[socket.id]) {
       var pid = engine.addPlayer(false);
       players[socket.id].playerId = pid;
-      socket.emit('init',{'playerId' : pid})
       if (firstConnect){
         //engine.spawnWave(1);
+        engine.terrain.generateTerrain();
         firstConnect = false;
       }
+      socket.emit('init',{'playerId' : pid, 'terrain' : engine.terrain.surfaceMap})
     }
   });
 

@@ -13,6 +13,9 @@ function GamePro() {
     var game_engine;
     var socket;
     var player;
+    this.player_img;
+    var lastPlayerPos;
+    var offset = {x:0,y:-200};
     var gameActive = false;
     var banner = new Banner();
     var uiMode = 'login';
@@ -22,6 +25,11 @@ function GamePro() {
         socket = io.connect();
         _canvas = document.getElementById('canvas');
         uiMode = 'login';
+        //loadassets
+        this.player_img = new Image;      // First create the image...
+        this.player_img.onload = function(){  // ...then set the onload handler...
+        };
+        this.player_img.src = "spaceman.png";
         if (_canvas && _canvas.getContext) {
 
             _canvasContext = _canvas.getContext('2d');
@@ -30,7 +38,7 @@ function GamePro() {
             _canvasBuffer.height = _canvas.height;
             _canvasBufferContext = _canvasBuffer.getContext('2d');
 
-            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, terrain);
+            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, terrain, this.player_img);
             this.waveCount = $("#waveCount");
             this.waveCount.hide();
             this.killCount = $("#killCount");
@@ -44,7 +52,7 @@ function GamePro() {
         return false;
     }
 
-    function LoadContent () {
+    function LoadContent (data) {
         var cookie = $.cookie("progame");
         if (cookie != null) {
             //user already finished some maps
@@ -62,11 +70,8 @@ function GamePro() {
             LocalEvent(event);
         });
 
-  	//images
-        //imagebg = new Image();
-        //imagebg.src = 'images/marqod.png';
-        $("#waveCount").show();
-        $("#killCount").show();
+  //      $("#waveCount").show();
+  //      $("#killCount").show();
         uiMode = "game";
     }
 
@@ -80,6 +85,7 @@ function GamePro() {
 
     this.tick = function(){
       game_engine.Update()
+      this.Update();
       this.Draw();
     }
 
@@ -148,8 +154,8 @@ function GamePro() {
         }
         if (msg) {
           msg.time = Date.now();
-          game_engine.queue_message(msg);
           socket.emit('msg', msg)
+          game_engine.queue_message(msg);
         }
       }
     }
@@ -160,8 +166,9 @@ function GamePro() {
       });
       socket.on('init', function (data) {
         clearMenus();
-        setPlayer(data);
         LoadContent();
+        setPlayer(data);
+        setTerrain(data);
         gameActive = true;
         setInterval(function() {document.proGame.updateMenus()}, 1000 / 10);
       });
@@ -205,7 +212,12 @@ function GamePro() {
     }
 
     function setPlayer(msg) {
-      player = new playerModel.Player(msg.playerId, false, weapon, ammo);
+      player = new playerModel.Player(msg.playerId, false, weapon, ammo, this.player_img);
+      lastPlayerPos = player.position;
+    }
+
+    function setTerrain(msg) {
+      game_engine.setTerrain(msg.terrain);
     }
 
     function getPosition(e) {
@@ -223,8 +235,31 @@ function GamePro() {
     // offset() returns the position of the element relative to the document
       var x = e.pageX - $(targ).offset().left;
       var y = e.pageY - $(targ).offset().top;
-      return {"x": x, "y": y};
+      return {"x": x-offset.x, "y": y-offset.y};
     };
+
+    this.player = function(){
+      console.log(game_engine.getPlayer(player.id).position);
+      console.log(game_engine.getPlayer(player.id).velocity);
+      console.log(game_engine.getPlayer(player.id).velocityPixels);
+    }
+    this.offset = function(){
+      return offset;
+    }
+
+    this.Update = function () {
+      if(player){
+        var plr = game_engine.getPlayer(player.id);
+        if(plr){
+          var dX = (plr.position.x - lastPlayerPos.x);
+          var dY = (plr.position.y - lastPlayerPos.y);
+          offset.x += (plr.position.x - lastPlayerPos.x);
+          offset.y += (plr.position.y - lastPlayerPos.y);
+          lastPlayerPos.x = plr.position.x;
+          lastPlayerPos.y = plr.position.y;
+        }
+      }
+    }
 
     this.Draw = function () {
         //clear canvas
@@ -240,18 +275,16 @@ function GamePro() {
         for(var p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
           //draw player
-          _canvasBufferContext.fillStyle = plr.playerColor[p % 6];
-          _canvasBufferContext.font = '12px Georgia';
-          _canvasBufferContext.fillText(plr.artAsset(),plr.position.x-15,plr.position.y);
+          plr.draw(_canvasBufferContext,offset);
           //draw healthbar
           _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
-          _canvasBufferContext.fillRect(plr.position.x - 13,
-                                        plr.position.y - 20,
+          _canvasBufferContext.fillRect((plr.position.x - 13) - offset.x,
+                                        (plr.position.y - 20) - offset.y,
                                         30,
                                         3);
           _canvasBufferContext.fillStyle = 'rgba(200,10,10,0.6)';
-          _canvasBufferContext.fillRect(plr.position.x - 13,
-                                        plr.position.y - 20,
+          _canvasBufferContext.fillRect((plr.position.x - 13) - offset.x,
+                                        (plr.position.y - 20) - offset.y,
                                         30 * (plr.health / plr.maxHealth),
                                         3);
         }
@@ -262,7 +295,7 @@ function GamePro() {
             if (am) {
               _canvasBufferContext.font = '20px georgia';
               _canvasBufferContext.fillStyle = 'rgba(250,0,50,1.0)';
-              _canvasBufferContext.fillText("*",am.position.x,am.position.y);
+              _canvasBufferContext.fillText("*",am.position.x-offset.x,am.position.y-offset.y);
             }
           }
         }
@@ -279,11 +312,11 @@ function GamePro() {
         //draw surface terrain
         _canvasBufferContext.fillStyle = 'rgba(0,250,0,1.0)';
         _canvasBufferContext.beginPath();
-        _canvasBufferContext.moveTo(0,800);
-        for(var x in game_engine.terrain.surfaceMap){
-          _canvasBufferContext.lineTo(x,game_engine.terrain.surfaceMap[x]);
+        _canvasBufferContext.moveTo(0,1000);
+        for(var x = (-offset.x + (offset.x % 25)); x <= (offset.x + 825); x += 25){
+          _canvasBufferContext.lineTo(x-offset.x,game_engine.terrain.surfaceMap[x]-offset.y);
         }
-        _canvasBufferContext.lineTo(800,800);
+        _canvasBufferContext.lineTo(1000,1000);
         _canvasBufferContext.closePath();
         _canvasBufferContext.fill();
         //this.draw_commandBar();
@@ -295,8 +328,10 @@ function GamePro() {
 
     this.updateMenus = function() {
       this.waveCount.text("WAVE: " + game_engine.waveCount);
-      if (game_engine.game_state.players[player.id]){
-        this.killCount.text("KILLS: " + game_engine.game_state.players[player.id].kills);
+      if(player){
+       if (game_engine.game_state.players[player.id]){
+         this.killCount.text("KILLS: " + game_engine.game_state.players[player.id].kills);
+       }
       }
     }
 

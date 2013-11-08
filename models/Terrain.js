@@ -10,7 +10,7 @@ exports.Terrain = function(wBound,hBound) {
   this.generateTerrain = function(){
     var mid = heightMax*0.8;
     var last = mid;
-    for(var i=0;i<=widthMax;i+=15){
+    for(var i=-600;i<=widthMax+600;i+=25){
       var variance = Math.random()
       if (variance < 0.98) {
         variance = 30;

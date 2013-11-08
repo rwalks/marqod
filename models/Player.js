@@ -1,6 +1,6 @@
 (function(exports) {
 
-exports.Player = function(pid,server,weapon,ammo) {
+exports.Player = function(pid,server,weapon,ammo,player_img) {
 
 
   if (!(typeof require === 'undefined')){
@@ -9,18 +9,18 @@ exports.Player = function(pid,server,weapon,ammo) {
 
   this.id = pid;
   this.position = {};
-  this.position.x = 100;
+  this.position.x = 400;
   this.position.y = 100;
   this.velocity = {x:0,y:0};
-  var velocity = this.velocity;
   this.playerWeapon = new weapon.Weapon(this.id,ammo);
   var serverTime = server ? 0 : 0;
   this.maxHealth = 100;
   this.health = 100;
-  this.animationFrame = 1;
   this.highWave;
   this.kills = 0;
+  this.maxSpeed = 200;
   var playerDirection = 0;
+  var img = player_img;
 
   this.update_state = function(msg){
     var ret;
@@ -35,12 +35,15 @@ exports.Player = function(pid,server,weapon,ammo) {
     return ret;
   }
 
-  this.update = function(lastUpdate){
-    this.animationFrame += 1;
+  this.update = function(lastUpdate,terrainHash,objects){
     var deltaT = Date.now() - lastUpdate;
-    playerDirection = (velocity.x > 0) ? 1 : 0;
-    this.position.x += (velocity.x / 1000) * (deltaT + serverTime);
-    this.position.y += (velocity.y / 1000) * (deltaT + serverTime);
+    //playerDirection = (this.velocity.x != 0) ? ((this.velocity.x > 0) ? 1 : 0) : playerDirection;
+    //this.checkVelocity();
+    //this.velocity.y += 2; //GRAVITAS
+    this.checkTerrain(terrainHash);
+    this.checkObjects(objects);
+    this.position.x += (this.velocity.x / 1000) * (deltaT + serverTime);
+    this.position.y += (this.velocity.y / 1000) * (deltaT + serverTime);
   }
 
   this.click = function(coords){
@@ -49,29 +52,38 @@ exports.Player = function(pid,server,weapon,ammo) {
   }
 
   this.move = function(direction,state) {
-    var val = (state) ? 100 : -100;
+    var val = (state) ? 10 : -10;
     switch(direction) {
       case "left":
-        velocity.x -= val;
+        this.velocity.x -= val;
+        playerDirection = 0;
         break;
       case "right":
-        velocity.x += val;
+        playerDirection = 1;
+        this.velocity.x += val;
         break;
       case "down":
-        velocity.y += val;
+        this.velocity.y += val;
         break;
       case "up":
-        velocity.y -= val;
+        this.velocity.y -= val;
         break;
     }
-    this.checkVelocity();
   }
 
   this.checkVelocity = function(){
     for (v in this.velocity){
-      this.velocity[v] = (this.velocity[v] > 100) ? 100 : this.velocity[v];
-      this.velocity[v] = (this.velocity[v] < -100) ? -100 : this.velocity[v];
+      this.velocity[v] = (this.velocity[v] > this.maxSpeed) ? this.maxSpeed : this.velocity[v];
+      this.velocity[v] = (this.velocity[v] < -this.maxSpeed) ? -this.maxSpeed : this.velocity[v];
     }
+  }
+
+  this.checkTerrain = function(terrainHash){
+
+  }
+
+  this.checkObjects = function(objects){
+
   }
 
   this.playerColor = {
@@ -83,19 +95,6 @@ exports.Player = function(pid,server,weapon,ammo) {
     5:'rgba(255,100,200,1.0)'
   }
 
-  this.artAsset = function() {
-    var imgRet;
-    if (this.animationFrame > 20) {
-      if (this.animationFrame > 40) {
-        this.animationFrame = 0;
-      }
-      imgRet = playerDirection ? "~( o_o)~" : "~(o_o )~";
-    }else{
-      imgRet = playerDirection ? "-( o_o)-" : "-(o_o )-";
-    }
-    return imgRet;
-  }
-
   this.serverPush = function (data) {
     //for (field in data) {
     //  this[field] = data[field];
@@ -104,6 +103,18 @@ exports.Player = function(pid,server,weapon,ammo) {
    this.health = data.health;
    this.kills = data.kills;
   }
+
+  this.draw = function(context,offset) {
+    if (img){
+    var xSpriteOffset = (30*playerDirection);
+    context.drawImage(img,
+           xSpriteOffset,0,
+           30,40,
+          (this.position.x-15)-offset.x,(this.position.y-20)-offset.y,
+           30,40);
+   }
+  }
+
 
   this.click_message = function(type,coords) {
     return {playerId: this.id, 'type':type, 'coords':coords}
