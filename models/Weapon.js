@@ -11,9 +11,9 @@ exports.Weapon = function(pid,ammoM) {
   var refireRate = 00;
   this.playerId = pid;
 
-  this.fire = function(pos, coords) {
+  this.fire = function(pos, coords, playerV) {
     if ((Date.now() - lastFire) > refireRate){
-      var am = new ammo.Ammo(0, pos, coords, pid); 
+      var am = new ammo.Ammo(0, pos, coords, pid, playerV); 
       lastFire = Date.now();
       return [am];
     }

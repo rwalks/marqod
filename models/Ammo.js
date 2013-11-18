@@ -1,13 +1,13 @@
 (function(exports) {
 
-exports.Ammo = function(id,origin,targ,pid) {
+exports.Ammo = function(id,origin,targ,pid,initialV) {
 
   var id
   this.playerId = pid;
   this.position = origin;
   this.target = targ;
-  this.velocity = {};
-  var maxSpeed = 200;
+  this.velocity = (initialV ? {x: initialV.x, y: initialV.y} : {x:0,y:0});
+  var maxSpeed = 400;
   this.attackVal = 10;
   var serverTime = (typeof require === 'undefined') ? 0 : 0;
   var angle = (this.target && this.position) ?
@@ -15,8 +15,8 @@ exports.Ammo = function(id,origin,targ,pid) {
     0;
 
   this.setVelocity = function(){
-    this.velocity.x = Math.sin(angle) * maxSpeed;
-    this.velocity.y = Math.cos(angle) * maxSpeed;
+    this.velocity.x += Math.sin(angle) * maxSpeed;
+    this.velocity.y += Math.cos(angle) * maxSpeed;
   }
 
   this.damage = function(){

@@ -235,7 +235,7 @@ function GamePro() {
     // offset() returns the position of the element relative to the document
       var x = e.pageX - $(targ).offset().left;
       var y = e.pageY - $(targ).offset().top;
-      return {"x": x-offset.x, "y": y-offset.y};
+      return {"x": x+offset.x, "y": y+offset.y};
     };
 
     this.player = function(){
@@ -276,6 +276,7 @@ function GamePro() {
           var plr = game_engine.game_state.players[p];
           //draw player
           plr.draw(_canvasBufferContext,offset);
+ //         plr.drawCollis(_canvasBufferContext,offset);
           //draw healthbar
           _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
           _canvasBufferContext.fillRect((plr.position.x - 13) - offset.x,
@@ -310,15 +311,8 @@ function GamePro() {
           }
         }
         //draw surface terrain
-        _canvasBufferContext.fillStyle = 'rgba(0,250,0,1.0)';
-        _canvasBufferContext.beginPath();
-        _canvasBufferContext.moveTo(0,1000);
-        for(var x = (-offset.x + (offset.x % 25)); x <= (offset.x + 825); x += 25){
-          _canvasBufferContext.lineTo(x-offset.x,game_engine.terrain.surfaceMap[x]-offset.y);
-        }
-        _canvasBufferContext.lineTo(1000,1000);
-        _canvasBufferContext.closePath();
-        _canvasBufferContext.fill();
+        gmae_engine.terrain.drawBorders(_canvasBufferContext, offset);
+        game_engine.terrain.draw(_canvasBufferContext, offset);
         //this.draw_commandBar();
         //draw buffer on screen
         _canvasContext.clearRect(0, 0, _canvas.width, _canvas.height);
@@ -349,6 +343,17 @@ function point_in_polygon(cx,cy,points) {
   }
   return within;
 }
+function pointInside(x,y,vs) {
+    var inside = false;
+    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        var xi = vs[i][0], yi = vs[i][1];
+        var xj = vs[j][0], yj = vs[j][1];
+        var intersect = ((yi > y) != (yj > y))
+            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+};
 
 function distance(obj1, obj2) {
   return Math.sqrt(Math.pow((obj2.position.x - obj1.position.x),2)+Math.pow((obj2.position.y-obj1.position.y),2));

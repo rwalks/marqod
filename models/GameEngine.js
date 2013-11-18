@@ -1,4 +1,4 @@
-var WIDTH = 8000;
+var WIDTH = 800000;
 var HEIGHT = 700;
 
 (function(exports) {
@@ -115,7 +115,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM, 
           var pl = this.game_state[objTypes[ob]][index];
           if (pl){
             try{
-              (objTypes[ob] == 'players') ? pl.update(lastUpdate,this.terrain.surfaceMap,[]) :
+              (objTypes[ob] == 'players') ? pl.update(lastUpdate,this.terrain,[]) :
                                            pl.update(lastUpdate);
             } catch (e) {}
           }

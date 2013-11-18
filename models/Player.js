@@ -6,12 +6,12 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   if (!(typeof require === 'undefined')){
     var weapon = require('./Weapon.js');
   }
-
   this.id = pid;
   this.position = {};
   this.position.x = 400;
   this.position.y = 100;
   this.velocity = {x:0,y:0};
+  this.deltaV = {x:0,y:0};
   this.playerWeapon = new weapon.Weapon(this.id,ammo);
   var serverTime = server ? 0 : 0;
   this.maxHealth = 100;
@@ -19,8 +19,11 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   this.highWave;
   this.kills = 0;
   this.maxSpeed = 200;
+  this.dVec;
   var playerDirection = 0;
   var img = player_img;
+  this.tPol;
+  var testFlag = true;
 
   this.update_state = function(msg){
     var ret;
@@ -35,20 +38,23 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     return ret;
   }
 
-  this.update = function(lastUpdate,terrainHash,objects){
+  this.update = function(lastUpdate,terrain,objects){
     var deltaT = Date.now() - lastUpdate;
     //playerDirection = (this.velocity.x != 0) ? ((this.velocity.x > 0) ? 1 : 0) : playerDirection;
     //this.checkVelocity();
-    //this.velocity.y += 2; //GRAVITAS
-    this.checkTerrain(terrainHash);
-    this.checkObjects(objects);
-    this.position.x += (this.velocity.x / 1000) * (deltaT + serverTime);
-    this.position.y += (this.velocity.y / 1000) * (deltaT + serverTime);
+    this.velocity.y += 2; //GRAVITAS
+    this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
+    this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
+    this.checkTerrain(terrain);
+    this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
+    this.velocity.y = (this.deltaV.y * 1000) / (deltaT + serverTime);
+    this.position.x += this.deltaV.x;
+    this.position.y += this.deltaV.y;
   }
 
   this.click = function(coords){
     var origin = {x : this.position.x, y : this.position.y}
-    return this.playerWeapon.fire(origin,coords);
+    return this.playerWeapon.fire(origin,coords,this.velocity);
   }
 
   this.move = function(direction,state) {
@@ -78,12 +84,83 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     }
   }
 
-  this.checkTerrain = function(terrainHash){
-
+  this.checkTerrain = function(terrain){
+    var colis = {br:{x:45,y:45},bm:{x:0,y:20},bl:{x:-45,y:45}};
+    var vScale; var colAngle;
+    for (var scale = -0.5;scale <= 1;scale+=0.1){
+      var baseX = this.position.x + colis.bm.x;
+      var baseY = this.position.y + colis.bm.y;
+      var modX = baseX + (this.deltaV.x * scale);
+      var modY = baseY + (this.deltaV.y * scale);
+      this.dVec = [modX,modY];
+      this.tPol = this.terrainPoly(modX,modY,terrain);
+      if((modX > terrain.widthMax) || (modX < 0)){
+        colAngle = 10.0 * ((this.deltaV.x > 0) ? -1 : 1);
+        break;
+      }
+      var col = intersectPoly([baseX,baseY],[modX,modY],this.tPol);
+      if (col){
+        colAngle = slope(col[0],col[1]);
+        break;
+      }else {
+       vScale = scale;
+      }
+    }
+    if(colAngle){
+      var oldX = this.deltaV.x;
+      var oldY = this.deltaV.y;
+      if(this.deltaV.x < 0 && colAngle > 0){
+        if(colAngle > 5.0){
+          this.deltaV.y = (this.deltaV.y > 0) ? 0 : this.deltaV.y;
+          this.deltaV.x = 0;
+        }else{
+            var modX = oldX * (colAngle / 15);
+            this.deltaV.x = (this.deltaV.x - modX) * 0.6;
+            modY = oldX - this.deltaV.x;
+            this.deltaV.y = this.deltaV.y + modY;
+            if (this.deltaV.y > 0){
+              this.deltaV.y = 0;
+              this.deltaV.x = 0;
+            }
+        }
+      }else if(this.deltaV.x > 0 && colAngle < 0){
+        if(colAngle < -5.0){
+          this.deltaV.y = (this.deltaV.y > 0) ? 0 : this.deltaV.y;
+          this.deltaV.x = 0;
+        }else{
+            var modX = oldX * (colAngle / 15);
+            this.deltaV.x = (this.deltaV.x - modX) * 0.6;
+            modY = oldX - this.deltaV.x;
+            this.deltaV.y = this.deltaV.y - modY;
+            if (this.deltaV.y > 0){
+              this.deltaV.y = 0;
+              this.deltaV.x = 0;
+            }
+        }
+      }else{
+          this.deltaV.y = 0;
+      }
+      var xDif = Math.abs(this.deltaV.x/oldX);
+      if(xDif > 1.0){this.deltaV.x = this.deltaV.x / xDif;}
+      var yDif = Math.abs(this.deltaV.y/oldY);
+      if(yDif > 1.0){this.deltaV.y = this.deltaV.y / xDif;}
+    }else{
+      this.deltaV.x = this.deltaV.x * (vScale ? vScale : 0);
+      this.deltaV.y = this.deltaV.y * (vScale ? vScale : 0);
+    }
   }
 
-  this.checkObjects = function(objects){
+  this.terrainPoly = function(cX,cY,terrain){
+    var leftX = cX-(cX%terrain.terrainInterval);
+    var polyPoints = [];
+    for (var i = leftX-(terrain.terrainInterval*6); i <= leftX+(terrain.terrainInterval*6); i += terrain.terrainInterval){
+      polyPoints.push([i,terrain.surfaceMap[i]]);
+    }
+    polyPoints.push([leftX,terrain.heightMax*10]);
+    return polyPoints;
+  }
 
+  function checkObjects(objects){
   }
 
   this.playerColor = {
@@ -102,6 +179,23 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
    this.position = data.position;
    this.health = data.health;
    this.kills = data.kills;
+   this.velocity = data.velocity;
+  }
+
+  this.drawCollis = function(bufferContext,offset){
+    if(this.tPol && this.dVec){
+      bufferContext.fillStyle = 'rgba(250,0,0,1.0)';
+      bufferContext.beginPath();
+      bufferContext.moveTo(this.tPol[0][0]-offset.x,this.tPol[0][1]-offset.y);
+      var slicePoints = this.tPol.slice(1);
+      for(var i in slicePoints){
+        bufferContext.lineTo(slicePoints[i][0]-offset.x,slicePoints[i][1]-offset.y);
+      }
+      bufferContext.closePath();
+      bufferContext.fill();
+      bufferContext.fillStyle = 'rgba(0,0,250,1.0)';
+      bufferContext.fillRect(this.dVec[0]-1-offset.x,this.dVec[1]-1-offset.y,2,2);
+    }
   }
 
   this.draw = function(context,offset) {
@@ -152,7 +246,58 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     }
     return msg;
   }
+
+function intersectPoly(orig,targ,polyPoints){
+  var intersect = false;
+  var intersectPair;
+  var p1; var p2; var p3;
+  for(var i=0;i<polyPoints.length;i++){
+    p1 = polyPoints[i];
+    p2 = polyPoints[i+1];
+    if (!p2){ p2 = polyPoints[0];}
+    if (intersectPoints(p1,p2,orig,targ)){
+      intersect = !intersect;
+      intersectPair = [p1,p2];
+    }
+  }
+    if (intersect && intersectPair) {
+      return intersectPair;
+    }
+    return false;
+}
+
+function CCW(p1,p2,p3){
+  var a = p1[0]; var b = p1[1];
+  var c = p2[0]; var d = p2[1];
+  var e = p3[0]; var f = p3[1];
+  return (f - b) * (c - a) > (d - b) * (e - a);
+}
+
+function intersectPoints(p1,p2,p3,p4){
+  return (CCW(p1, p3, p4) != CCW(p2, p3, p4)) && (CCW(p1, p2, p3) != CCW(p1, p2, p4));
+}
+
+function slope(p1,p2){
+  return (p1[1] - p2[1]) / (p1[0] - p2[0]);
+}
+
+function pointInside(x,y,vs) {
+    var inside = false;
+    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+        var xi = vs[i][0], yi = vs[i][1];
+        var xj = vs[j][0], yj = vs[j][1];
+        var intersect = ((yi > y) != (yj > y))
+            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) {
+          inside = !inside;
+        }
+    }
+    return inside;
+};
+
 }
 
 
 }) (typeof exports === 'undefined'? this['playerModel']={}: exports);
+
+
