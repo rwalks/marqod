@@ -14,7 +14,7 @@ function GamePro() {
     var socket;
     var player;
     this.player_img;
-    var lastPlayerPos;
+    var lastPlayerPos = {x:0,y:0};
     var offset = {x:0,y:-300};
     var gameActive = false;
     var banner = new Banner();
@@ -39,6 +39,7 @@ function GamePro() {
             _canvasBufferContext = _canvasBuffer.getContext('2d');
 
             game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, terrain, this.player_img);
+            game_engine.terrain.generateStars();
             this.waveCount = $("#waveCount");
             this.waveCount.hide();
             this.killCount = $("#killCount");
@@ -253,8 +254,8 @@ function GamePro() {
         if(plr){
           var dX = (plr.position.x - lastPlayerPos.x);
           var dY = (plr.position.y - lastPlayerPos.y);
-          offset.x += (plr.position.x - lastPlayerPos.x);
-          offset.y += (plr.position.y - lastPlayerPos.y);
+          offset.x += dX;
+          offset.y += dY;
           lastPlayerPos.x = plr.position.x;
           lastPlayerPos.y = plr.position.y;
         }

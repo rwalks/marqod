@@ -27,7 +27,7 @@ exports.Terrain = function(wBound,hBound) {
     var w = ((this.widthMax/this.starScale) > 800) ? this.widthMax/this.starScale : 800;
     for(var i = 0; i < w; i++){
       if(Math.random()<0.7){
-       this.starField[i] = Math.floor(Math.random() * (this.heightMax*2)-(this.heightMax-200));
+       this.starField[i] = Math.floor(Math.random() * (this.heightMax*4))-(this.heightMax*3);
       }
     }
   }

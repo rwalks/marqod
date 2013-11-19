@@ -24,6 +24,8 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   var img = player_img;
   this.tPol;
   var testFlag = true;
+  var walkMode = false;
+  var flying = true;
 
   this.update_state = function(msg){
     var ret;
@@ -42,7 +44,9 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     var deltaT = Date.now() - lastUpdate;
     //playerDirection = (this.velocity.x != 0) ? ((this.velocity.x > 0) ? 1 : 0) : playerDirection;
     //this.checkVelocity();
-    this.velocity.y += 3; //GRAVITAS
+    if(flying){
+      this.velocity.y += 3; //GRAVITAS
+    }
     this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
     this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
     this.checkTerrain(terrain);
@@ -58,7 +62,13 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   }
 
   this.move = function(direction,state) {
-    var val = (state) ? 10 : -10;
+    var dir = state ? 1 : -1;
+    var val;
+    if(walkMode == false){
+      val = 10 * state;
+    }else if(walkMode){
+      val = 5 * state;
+    }
     switch(direction) {
       case "left":
         this.velocity.x -= val;
@@ -87,9 +97,9 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   this.checkTerrain = function(terrain){
     var colis = {br:{x:45,y:45},bm:{x:0,y:20},bl:{x:-45,y:45}};
     var vScale; var colAngle;
-    for (var scale = -0.5;scale <= 1;scale+=0.1){
-      var baseX = this.position.x + colis.bm.x;
-      var baseY = this.position.y + colis.bm.y;
+    var baseX = this.position.x + colis.bm.x;
+    var baseY = this.position.y + colis.bm.y;
+    for (var scale = 0;scale <= 1;scale+=0.1){
       var modX = baseX + (this.deltaV.x * scale);
       var modY = baseY + (this.deltaV.y * scale);
       this.dVec = [modX,modY];
@@ -110,31 +120,27 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
       var oldX = this.deltaV.x;
       var oldY = this.deltaV.y;
       if(this.deltaV.x < 0 && colAngle > 0){
-        if(colAngle > 5.0){
+        if(colAngle > 2.0){
           this.deltaV.y = (this.deltaV.y > 0) ? 0 : this.deltaV.y;
           this.deltaV.x = 0;
         }else{
-            var modX = oldX * (colAngle / 15);
+            var modX = oldX * (colAngle/10);
             this.deltaV.x = (this.deltaV.x - modX) * 0.4;
-            modY = oldX - this.deltaV.x;
-            this.deltaV.y = (this.deltaV.y + modY) * 0.2;
+            this.deltaV.y = (this.deltaV.y + (25*(colAngle/10))) * 0.4;
             if (this.deltaV.y > 0){
               this.deltaV.y = 0;
-              this.deltaV.x = 0;
             }
         }
       }else if(this.deltaV.x > 0 && colAngle < 0){
-        if(colAngle < -5.0){
+        if(colAngle < -2.0){
           this.deltaV.y = (this.deltaV.y > 0) ? 0 : this.deltaV.y;
           this.deltaV.x = 0;
         }else{
-            var modX = oldX * (colAngle / 15);
+            var modX = oldX * (colAngle/10);
             this.deltaV.x = (this.deltaV.x - modX) * 0.4;
-            modY = oldX - this.deltaV.x;
-            this.deltaV.y = (this.deltaV.y - modY) * 0.2;
+            this.deltaV.y = (this.deltaV.y + (25*(colAngle/10))) * 0.4;
             if (this.deltaV.y > 0){
               this.deltaV.y = 0;
-              this.deltaV.x = 0;
             }
         }
       }else{
@@ -144,7 +150,15 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
       if(xDif > 1.0){this.deltaV.x = this.deltaV.x / xDif;}
       var yDif = Math.abs(this.deltaV.y/oldY);
       if(yDif > 1.0){this.deltaV.y = this.deltaV.y / xDif;}
+      if(pointInside(baseX+this.deltaV.x,baseY+this.deltaV.y,this.tPol)){
+        this.deltaV.x = 0;
+        this.velocity.x = 0;
+        this.deltaV.y = 0;
+        this.velocity.y = 0;
+      }
+      flying = false;
     }else{
+      flying = true;
       this.deltaV.x = this.deltaV.x * (vScale ? vScale : 0);
       this.deltaV.y = this.deltaV.y * (vScale ? vScale : 0);
     }
