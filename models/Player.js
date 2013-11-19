@@ -42,7 +42,7 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     var deltaT = Date.now() - lastUpdate;
     //playerDirection = (this.velocity.x != 0) ? ((this.velocity.x > 0) ? 1 : 0) : playerDirection;
     //this.checkVelocity();
-    this.velocity.y += 2; //GRAVITAS
+    this.velocity.y += 3; //GRAVITAS
     this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
     this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
     this.checkTerrain(terrain);
@@ -115,9 +115,9 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
           this.deltaV.x = 0;
         }else{
             var modX = oldX * (colAngle / 15);
-            this.deltaV.x = (this.deltaV.x - modX) * 0.6;
+            this.deltaV.x = (this.deltaV.x - modX) * 0.4;
             modY = oldX - this.deltaV.x;
-            this.deltaV.y = this.deltaV.y + modY;
+            this.deltaV.y = (this.deltaV.y + modY) * 0.2;
             if (this.deltaV.y > 0){
               this.deltaV.y = 0;
               this.deltaV.x = 0;
@@ -129,9 +129,9 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
           this.deltaV.x = 0;
         }else{
             var modX = oldX * (colAngle / 15);
-            this.deltaV.x = (this.deltaV.x - modX) * 0.6;
+            this.deltaV.x = (this.deltaV.x - modX) * 0.4;
             modY = oldX - this.deltaV.x;
-            this.deltaV.y = this.deltaV.y - modY;
+            this.deltaV.y = (this.deltaV.y - modY) * 0.2;
             if (this.deltaV.y > 0){
               this.deltaV.y = 0;
               this.deltaV.x = 0;

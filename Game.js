@@ -15,7 +15,7 @@ function GamePro() {
     var player;
     this.player_img;
     var lastPlayerPos;
-    var offset = {x:0,y:-200};
+    var offset = {x:0,y:-300};
     var gameActive = false;
     var banner = new Banner();
     var uiMode = 'login';
@@ -269,6 +269,9 @@ function GamePro() {
         _canvasBufferContext.globalCompositeOperation="destination-over";
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
+    //bg components
+        game_engine.terrain.drawBG(_canvasBufferContext, offset);
+        //marqod banner
         if (uiMode == "login" || uiMode == "menu") {
             banner.draw(_canvasBufferContext);
         }
@@ -311,7 +314,7 @@ function GamePro() {
           }
         }
         //draw surface terrain
-        gmae_engine.terrain.drawBorders(_canvasBufferContext, offset);
+        game_engine.terrain.drawBorders(_canvasBufferContext, offset);
         game_engine.terrain.draw(_canvasBufferContext, offset);
         //this.draw_commandBar();
         //draw buffer on screen

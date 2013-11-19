@@ -1,5 +1,5 @@
 var WIDTH = 800000;
-var HEIGHT = 700;
+var HEIGHT = 1000;
 
 (function(exports) {
 
@@ -90,6 +90,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, terrainM, 
 
     this.setTerrain = function(terrainM){
       this.terrain.surfaceMap = terrainM;
+      this.terrain.generateBG();
     }
 
     this.Update = function () {

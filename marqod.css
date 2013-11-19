@@ -63,12 +63,16 @@ td {
   padding-left: 2px;
 }
 
+#mainMenu .menuButton {
+  color: white;
+}
+
 #loginButtonContainer .loginButton {
   background: transparent;
   border: none;
+  color: white;
   padding: 0;
   font-family: 'georgia';
   font-size: 12px;
-  opacity: 0.6;
   cursor: pointer;
 }
