@@ -25,7 +25,6 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   this.tPol;
   var testFlag = true;
   var walkMode = false;
-  var flying = true;
 
   this.update_state = function(msg){
     var ret;
@@ -44,9 +43,7 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     var deltaT = Date.now() - lastUpdate;
     //playerDirection = (this.velocity.x != 0) ? ((this.velocity.x > 0) ? 1 : 0) : playerDirection;
     //this.checkVelocity();
-    if(flying){
       this.velocity.y += 3; //GRAVITAS
-    }
     this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
     this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
     this.checkTerrain(terrain);
@@ -99,70 +96,41 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     var vScale; var colAngle;
     var baseX = this.position.x + colis.bm.x;
     var baseY = this.position.y + colis.bm.y;
-    for (var scale = 0;scale <= 1;scale+=0.1){
-      var modX = baseX + (this.deltaV.x * scale);
-      var modY = baseY + (this.deltaV.y * scale);
-      this.dVec = [modX,modY];
-      this.tPol = this.terrainPoly(modX,modY,terrain);
+      var modX = baseX + this.deltaV.x;
+      var modY = baseY + this.deltaV.y;
       if((modX > terrain.widthMax) || (modX < 0)){
-        colAngle = 10.0 * ((this.deltaV.x > 0) ? -1 : 1);
-        break;
-      }
-      var col = intersectPoly([baseX,baseY],[modX,modY],this.tPol);
-      if (col){
-        colAngle = slope(col[0],col[1]);
-        break;
-      }else {
-       vScale = scale;
-      }
-    }
-    if(colAngle){
-      var oldX = this.deltaV.x;
-      var oldY = this.deltaV.y;
-      if(this.deltaV.x < 0 && colAngle > 0){
-        if(colAngle > 2.0){
-          this.deltaV.y = (this.deltaV.y > 0) ? 0 : this.deltaV.y;
-          this.deltaV.x = 0;
-        }else{
-            var modX = oldX * (colAngle/10);
-            this.deltaV.x = (this.deltaV.x - modX) * 0.4;
-            this.deltaV.y = (this.deltaV.y + (25*(colAngle/10))) * 0.4;
-            if (this.deltaV.y > 0){
-              this.deltaV.y = 0;
-            }
-        }
-      }else if(this.deltaV.x > 0 && colAngle < 0){
-        if(colAngle < -2.0){
-          this.deltaV.y = (this.deltaV.y > 0) ? 0 : this.deltaV.y;
-          this.deltaV.x = 0;
-        }else{
-            var modX = oldX * (colAngle/10);
-            this.deltaV.x = (this.deltaV.x - modX) * 0.4;
-            this.deltaV.y = (this.deltaV.y + (25*(colAngle/10))) * 0.4;
-            if (this.deltaV.y > 0){
-              this.deltaV.y = 0;
-            }
-        }
+
       }else{
-          this.deltaV.y = 0;
+        this.tPol = this.terrainPoly(modX,modY,terrain);
+        var intPair = intersectPoly([baseX,baseY],[modX,modY],this.tPol);
+        if (intPair){
+          var vMag = this.lineLength([baseX,baseY],[modX,modY]);
+          var adjNorm = this.normal(intPair[0],intPair[1],vMag);
+          var negSlope = (intPair[0][1] > intPair[1][1]) ? -1 : 1;
+          this.deltaV.x += negSlope * (adjNorm[1][0] - adjNorm[0][0]);
+          this.deltaV.y += negSlope * (adjNorm[1][1] - adjNorm[0][1]);
+        }
       }
-      var xDif = Math.abs(this.deltaV.x/oldX);
-      if(xDif > 1.0){this.deltaV.x = this.deltaV.x / xDif;}
-      var yDif = Math.abs(this.deltaV.y/oldY);
-      if(yDif > 1.0){this.deltaV.y = this.deltaV.y / xDif;}
-      if(pointInside(baseX+this.deltaV.x,baseY+this.deltaV.y,this.tPol)){
-        this.deltaV.x = 0;
-        this.velocity.x = 0;
-        this.deltaV.y = 0;
-        this.velocity.y = 0;
-      }
-      flying = false;
-    }else{
-      flying = true;
-      this.deltaV.x = this.deltaV.x * (vScale ? vScale : 0);
-      this.deltaV.y = this.deltaV.y * (vScale ? vScale : 0);
-    }
   }
+
+this.lineLength = function(p1,p2){
+  var retX = p2[0] - p1[0];
+  retX = retX * retX;
+  var retY = p2[1] - p1[1];
+  retY = retY * retY;
+  return Math.sqrt(retX + retY); 
+}
+
+this.normal = function(p1,p2,mag){
+  var m = (p1[1] - p2[1]) / (p1[0] - p2[0]);
+  var l = Math.abs(mag);
+  m = -1 / m;
+  var midX = (p1[0] + p2[0]) / 2;
+  var midY = (p1[1] + p2[1]) / 2;
+  var normX = midX + (l * (1/Math.sqrt(1+(m*m))));
+  var normY = midY + (l * (m/Math.sqrt(1+(m*m))));
+  return [[midX,midY], [normX,normY]];
+}
 
   this.terrainPoly = function(cX,cY,terrain){
     var leftX = cX-(cX%terrain.terrainInterval);
