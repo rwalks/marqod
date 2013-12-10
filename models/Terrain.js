@@ -92,6 +92,15 @@ exports.Terrain = function(wBound,hBound) {
         bufferContext.fillText('.',x-(offset.x/this.starScale),this.starField[x]-offset.y);
       }
     }
+    //drawAtmo
+    var grd=bufferContext.createLinearGradient(0,700,0,0);
+    var density = (offset.y+500)/1000;
+    density = (density > 1) ? 1 : density;
+    grd.addColorStop(0,'rgba(150,0,0,'+density+')');
+    grd.addColorStop(1,'rgba('+(150*density).toFixed(0)+',0,0,'+(density-0.01).toFixed(2)+')');
+
+    bufferContext.fillStyle=grd;
+    bufferContext.fillRect(0,0,this.widthMax,this.heightMax);
     //drawBgs
     for(var i in Object.keys(this.bgMaps)){
       var bgScale = Object.keys(this.bgMaps).reverse()[i];

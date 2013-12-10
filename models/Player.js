@@ -25,6 +25,9 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   this.tPol;
   var testFlag = true;
   var walkMode = false;
+  var moveFlags = {left:false,right:false,up:false,down:false}
+
+  var jumpCount = 0;
 
   this.update_state = function(msg){
     var ret;
@@ -40,17 +43,32 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   }
 
   this.update = function(lastUpdate,terrain,objects){
+    if (jumpCount > 0) {jumpCount -= 1;}
+    var val = 20;
+    if (moveFlags.left){
+      this.velocity.x -= (walkMode ? val : 0);
+    }
+    if (moveFlags.right){
+      this.velocity.x += (walkMode ? val : 0);
+    }
+    if (moveFlags.up){
+      this.velocity.y -= val;
+    }
+    if (moveFlags.down){
+      this.velocity.y += val;
+    }
+
     var deltaT = Date.now() - lastUpdate;
     //playerDirection = (this.velocity.x != 0) ? ((this.velocity.x > 0) ? 1 : 0) : playerDirection;
     //this.checkVelocity();
-      this.velocity.y += 3; //GRAVITAS
+      this.velocity.y += 9; //GRAVITAS
     this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
     this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
     this.checkTerrain(terrain);
-    this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
-    this.velocity.y = (this.deltaV.y * 1000) / (deltaT + serverTime);
     this.position.x += this.deltaV.x;
     this.position.y += this.deltaV.y;
+    this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
+    this.velocity.y = (this.deltaV.y * 1000) / (deltaT + serverTime);
   }
 
   this.click = function(coords){
@@ -59,28 +77,27 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   }
 
   this.move = function(direction,state) {
-    var dir = state ? 1 : -1;
-    var val;
-    if(walkMode == false){
-      val = 10 * state;
-    }else if(walkMode){
-      val = 5 * state;
-    }
     switch(direction) {
       case "left":
-        this.velocity.x -= val;
+        moveFlags.left = state;
         playerDirection = 0;
         break;
       case "right":
+        moveFlags.right = state;
         playerDirection = 1;
-        this.velocity.x += val;
         break;
       case "down":
-        this.velocity.y += val;
+        moveFlags.down = state;
         break;
       case "up":
-        this.velocity.y -= val;
+        moveFlags.up = state;
         break;
+      case "jump":
+        if (walkMode && jumpCount == 0){
+          jumpCount = 30;
+          this.velocity.y -= 120;
+          break;
+        }
     }
   }
 
@@ -93,7 +110,6 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
 
   this.checkTerrain = function(terrain){
     var colis = {br:{x:45,y:45},bm:{x:0,y:20},bl:{x:-45,y:45}};
-    var vScale; var colAngle;
     var baseX = this.position.x + colis.bm.x;
     var baseY = this.position.y + colis.bm.y;
       var modX = baseX + this.deltaV.x;
@@ -105,10 +121,23 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
         var intPair = intersectPoly([baseX,baseY],[modX,modY],this.tPol);
         if (intPair){
           var vMag = this.lineLength([baseX,baseY],[modX,modY]);
-          var adjNorm = this.normal(intPair[0],intPair[1],vMag);
+          var adjNorm = this.normal(intPair[0],intPair[1],vMag, modY);
           var negSlope = (intPair[0][1] > intPair[1][1]) ? -1 : 1;
           this.deltaV.x += negSlope * (adjNorm[1][0] - adjNorm[0][0]);
           this.deltaV.y += negSlope * (adjNorm[1][1] - adjNorm[0][1]);
+
+          this.deltaV.x = this.deltaV.x * 0.8;
+          this.deltaV.y = this.deltaV.y * 0.8;
+          modX = baseX + this.deltaV.x;
+          modY = baseY + this.deltaV.y;
+          if(pointInside(modX,modY,this.tPol)){
+            this.deltaV.x = 0;
+            this.deltaV.y = 0;
+          }
+
+          walkMode = true;
+        }else{
+          walkMode = false;
         }
       }
   }
@@ -121,7 +150,7 @@ this.lineLength = function(p1,p2){
   return Math.sqrt(retX + retY); 
 }
 
-this.normal = function(p1,p2,mag){
+this.normal = function(p1,p2,mag,targetY){
   var m = (p1[1] - p2[1]) / (p1[0] - p2[0]);
   var l = Math.abs(mag);
   m = -1 / m;
@@ -129,13 +158,14 @@ this.normal = function(p1,p2,mag){
   var midY = (p1[1] + p2[1]) / 2;
   var normX = midX + (l * (1/Math.sqrt(1+(m*m))));
   var normY = midY + (l * (m/Math.sqrt(1+(m*m))));
+  if(!normY){ normY = midY + (midY-targetY); }
   return [[midX,midY], [normX,normY]];
 }
 
   this.terrainPoly = function(cX,cY,terrain){
     var leftX = cX-(cX%terrain.terrainInterval);
     var polyPoints = [];
-    for (var i = leftX-(terrain.terrainInterval*6); i <= leftX+(terrain.terrainInterval*6); i += terrain.terrainInterval){
+    for (var i = leftX-(terrain.terrainInterval*2); i <= leftX+(terrain.terrainInterval*2); i += terrain.terrainInterval){
       polyPoints.push([i,terrain.surfaceMap[i]]);
     }
     polyPoints.push([leftX,terrain.heightMax*10]);
@@ -165,8 +195,8 @@ this.normal = function(p1,p2,mag){
   }
 
   this.drawCollis = function(bufferContext,offset){
-    if(this.tPol && this.dVec){
-      bufferContext.fillStyle = 'rgba(250,0,0,1.0)';
+    if(this.tPol){
+      bufferContext.fillStyle = 'rgba(0,250,0,1.0)';
       bufferContext.beginPath();
       bufferContext.moveTo(this.tPol[0][0]-offset.x,this.tPol[0][1]-offset.y);
       var slicePoints = this.tPol.slice(1);
@@ -175,8 +205,6 @@ this.normal = function(p1,p2,mag){
       }
       bufferContext.closePath();
       bufferContext.fill();
-      bufferContext.fillStyle = 'rgba(0,0,250,1.0)';
-      bufferContext.fillRect(this.dVec[0]-1-offset.x,this.dVec[1]-1-offset.y,2,2);
     }
   }
 
@@ -223,6 +251,10 @@ this.normal = function(p1,p2,mag){
         //up
         msg['val'] = 'up';
         break;
+      case 32:
+        //up
+        msg['val'] = 'jump';
+        break;
       default:
         msg = null;
     }
@@ -237,6 +269,10 @@ function intersectPoly(orig,targ,polyPoints){
     p1 = polyPoints[i];
     p2 = polyPoints[i+1];
     if (!p2){ p2 = polyPoints[0];}
+   // if(p1[0] == orig[0]){ console.log("oops");}
+   // if(p1[0] == targ[0]){ console.log("oops");}
+   // if(p2[0] == orig[0]){ console.log("oops");}
+   // if(p2[0] == targ[0]){ console.log("oops");}
     if (intersectPoints(p1,p2,orig,targ)){
       intersect = !intersect;
       intersectPair = [p1,p2];

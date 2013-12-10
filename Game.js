@@ -280,7 +280,6 @@ function GamePro() {
           var plr = game_engine.game_state.players[p];
           //draw player
           plr.draw(_canvasBufferContext,offset);
- //         plr.drawCollis(_canvasBufferContext,offset);
           //draw healthbar
           _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
           _canvasBufferContext.fillRect((plr.position.x - 13) - offset.x,
@@ -317,6 +316,10 @@ function GamePro() {
         //draw surface terrain
         game_engine.terrain.drawBorders(_canvasBufferContext, offset);
         game_engine.terrain.draw(_canvasBufferContext, offset);
+    //    for(var p in game_engine.game_state.players){
+    //      var plr = game_engine.game_state.players[p];
+    //      plr.drawCollis(_canvasBufferContext,offset);
+    //    }
         //this.draw_commandBar();
         //draw buffer on screen
         _canvasContext.clearRect(0, 0, _canvas.width, _canvas.height);
