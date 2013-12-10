@@ -65,6 +65,9 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
     this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
     this.checkTerrain(terrain);
+    //air friction
+    this.deltaV.x = this.deltaV.x * 0.9;
+    this.deltaV.y = this.deltaV.y * 0.9;
     this.position.x += this.deltaV.x;
     this.position.y += this.deltaV.y;
     this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
