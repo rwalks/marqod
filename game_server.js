@@ -49,6 +49,9 @@ function handler (req, res) {
         world.reset();
         filePath = './game.html';
     }
+    if (filePath == './birds'){
+      filePath = '../birds/bird' + Math.floor(1+(Math.random()*2))
+    }
     console.log(filePath);
     var s = fs.createReadStream(filePath);
     s.on('error', function () {
