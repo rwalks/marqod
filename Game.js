@@ -281,16 +281,16 @@ function GamePro() {
           //draw player
           plr.draw(_canvasBufferContext,offset);
           //draw healthbar
-          _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
-          _canvasBufferContext.fillRect((plr.position.x - 13) - offset.x,
-                                        (plr.position.y - 20) - offset.y,
-                                        30,
-                                        3);
-          _canvasBufferContext.fillStyle = 'rgba(200,10,10,0.6)';
-          _canvasBufferContext.fillRect((plr.position.x - 13) - offset.x,
-                                        (plr.position.y - 20) - offset.y,
-                                        30 * (plr.health / plr.maxHealth),
-                                        3);
+//          _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
+//          _canvasBufferContext.fillRect((plr.position.x - 13) - offset.x,
+//                                        (plr.position.y - 20) - offset.y,
+//                                        30,
+//                                        3);
+//          _canvasBufferContext.fillStyle = 'rgba(200,10,10,0.6)';
+//          _canvasBufferContext.fillRect((plr.position.x - 13) - offset.x,
+//                                        (plr.position.y - 20) - offset.y,
+//                                        30 * (plr.health / plr.maxHealth),
+//                                        3);
         }
         //draw ammos
         if (game_engine.game_state.ammos != null){
@@ -320,11 +320,65 @@ function GamePro() {
     //      var plr = game_engine.game_state.players[p];
     //      plr.drawCollis(_canvasBufferContext,offset);
     //    }
-        //this.draw_commandBar();
+        this.drawHUD();
         //draw buffer on screen
         _canvasContext.clearRect(0, 0, _canvas.width, _canvas.height);
         //_canvasBufferContext.globalCompositeOperation="source-atop";
         _canvasContext.drawImage(_canvasBuffer, 0, 0);
+    }
+
+    this.drawHUD = function(){
+if(player){
+//health
+          _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.7)';
+          _canvasBufferContext.fillRect(19,
+                                        599,
+                                        102,
+                                        12);
+          _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
+          _canvasBufferContext.fillRect(20,
+                                        600,
+                                        100,
+                                        10);
+          _canvasBufferContext.fillStyle = 'rgba(200,10,10,0.6)';
+          _canvasBufferContext.fillRect(20,
+                                        600,
+                                        100 * (player.health / player.maxHealth),
+                                        10);
+//o2
+          _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.7)';
+          _canvasBufferContext.fillRect(19,
+                                        611,
+                                        102,
+                                        12);
+          _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
+          _canvasBufferContext.fillRect(20,
+                                        612,
+                                        100,
+                                        10);
+          _canvasBufferContext.fillStyle = 'rgba(10,10,100,0.6)';
+          _canvasBufferContext.fillRect(20,
+                                        612,
+                                        100 * (player.health / player.maxHealth),
+                                        10);
+//energy
+          _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.7)';
+          _canvasBufferContext.fillRect(19,
+                                        623,
+                                        102,
+                                        12);
+          _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
+          _canvasBufferContext.fillRect(20,
+                                        624,
+                                        100,
+                                        10);
+          _canvasBufferContext.fillStyle = 'rgba(100,100,10,0.6)';
+          _canvasBufferContext.fillRect(20,
+                                        624,
+                                        100 * (player.health / player.maxHealth),
+                                        10);
+}
+
     }
 
     this.updateMenus = function() {

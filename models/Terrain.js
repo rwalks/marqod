@@ -41,9 +41,9 @@ exports.Terrain = function(wBound,hBound) {
     for(var i=-600;i<=width+600;i+= interval){
       var variance = Math.random()
       if (variance < 0.98) {
-        variance = bgInt ? 15 : 30;
+        variance = bgInt ? 5 : 15;
       }else{
-        variance = bgInt ? 40 : 500;
+        variance = bgInt ? 10 : 250;
       }
       var v = Math.floor((Math.random()*variance)-(variance/2));
       v = last + v;
@@ -94,7 +94,7 @@ exports.Terrain = function(wBound,hBound) {
     }
     //drawAtmo
     var grd=bufferContext.createLinearGradient(0,700,0,0);
-    var density = Math.pow(Math.E,(1000-offset.y)/500);
+    var density = (offset.y+500)/1000;
     density = (density > 1) ? 1 : density;
     grd.addColorStop(0,'rgba(75,20,20,'+density+')');
     grd.addColorStop(1,'rgba('+(150*density).toFixed(0)+',0,0,'+(density-0.01).toFixed(2)+')');

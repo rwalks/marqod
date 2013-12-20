@@ -26,6 +26,7 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
   var testFlag = true;
   var walkMode = false;
   var moveFlags = {left:false,right:false,up:false,down:false}
+  var airTime = 5;
 
   var jumpCount = 0;
 
@@ -52,10 +53,10 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
       this.velocity.x += (walkMode ? val : 0);
     }
     if (moveFlags.up){
-      this.velocity.y -= val;
+     // this.velocity.y -= val;
     }
     if (moveFlags.down){
-      this.velocity.y += val;
+     // this.velocity.y += val;
     }
 
     var deltaT = Date.now() - lastUpdate;
@@ -66,8 +67,8 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
     this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
     this.checkTerrain(terrain);
     //air friction
-    this.deltaV.x = this.deltaV.x * 0.9;
-    this.deltaV.y = this.deltaV.y * 0.9;
+    this.deltaV.x = this.deltaV.x * 0.99;
+    this.deltaV.y = this.deltaV.y * 0.94;
     this.position.x += this.deltaV.x;
     this.position.y += this.deltaV.y;
     this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
@@ -96,8 +97,8 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
         moveFlags.up = state;
         break;
       case "jump":
-        if (walkMode && jumpCount == 0){
-          jumpCount = 30;
+        if (airTime < 3 && jumpCount == 0){
+          jumpCount = 10;
           this.velocity.y -= 120;
           break;
         }
@@ -120,27 +121,35 @@ exports.Player = function(pid,server,weapon,ammo,player_img) {
       if((modX > terrain.widthMax) || (modX < 0)){
 
       }else{
-        this.tPol = this.terrainPoly(modX,modY,terrain);
-        var intPair = intersectPoly([baseX,baseY],[modX,modY],this.tPol);
-        if (intPair){
-          var vMag = this.lineLength([baseX,baseY],[modX,modY]);
-          var adjNorm = this.normal(intPair[0],intPair[1],vMag, modY);
-          var negSlope = (intPair[0][1] > intPair[1][1]) ? -1 : 1;
-          this.deltaV.x += negSlope * (adjNorm[1][0] - adjNorm[0][0]);
-          this.deltaV.y += negSlope * (adjNorm[1][1] - adjNorm[0][1]);
-
-          this.deltaV.x = this.deltaV.x * 0.8;
-          this.deltaV.y = this.deltaV.y * 0.8;
-          modX = baseX + this.deltaV.x;
-          modY = baseY + this.deltaV.y;
-          if(pointInside(modX,modY,this.tPol)){
-            this.deltaV.x = 0;
-            this.deltaV.y = 0;
+        var colLoop = true;
+        while(colLoop){
+          this.tPol = this.terrainPoly(modX,modY,terrain);
+          var intPair = intersectPoly([baseX,baseY],[modX,modY],this.tPol);
+          if (intPair){
+            var vMag = this.lineLength([baseX,baseY],[modX,modY]);
+            var adjNorm = this.normal(intPair[0],intPair[1],vMag, modY);
+            var negSlope = (intPair[0][1] > intPair[1][1]) ? -1 : 1;
+            this.deltaV.x += negSlope * (adjNorm[1][0] - adjNorm[0][0]);
+            this.deltaV.y += negSlope * (adjNorm[1][1] - adjNorm[0][1]);
+  
+            this.deltaV.x = this.deltaV.x * 0.8;
+            this.deltaV.y = this.deltaV.y * 0.8;
+            modX = baseX + this.deltaV.x;
+            modY = baseY + this.deltaV.y;
+            if(pointInside(modX,modY,this.tPol)){
+              //this.deltaV.x = 0;
+             // this.deltaV.y = 0;
+            }else{
+              colLoop = false;
+            }
+  
+            walkMode = true;
+            airTime = 0;
+          }else{
+            walkMode = false;
+            airTime += 1;
+            colLoop = false;
           }
-
-          walkMode = true;
-        }else{
-          walkMode = false;
         }
       }
   }
@@ -168,7 +177,7 @@ this.normal = function(p1,p2,mag,targetY){
   this.terrainPoly = function(cX,cY,terrain){
     var leftX = cX-(cX%terrain.terrainInterval);
     var polyPoints = [];
-    for (var i = leftX-(terrain.terrainInterval*2); i <= leftX+(terrain.terrainInterval*2); i += terrain.terrainInterval){
+    for (var i = leftX-(terrain.terrainInterval*2); i <= leftX+(terrain.terrainInterval*3); i += terrain.terrainInterval){
       polyPoints.push([i,terrain.surfaceMap[i]]);
     }
     polyPoints.push([leftX,terrain.heightMax*10]);
