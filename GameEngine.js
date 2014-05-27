@@ -185,12 +185,12 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
           }
           for(p in this.game_state.players){
             var plr = this.game_state.players[p];
-            if(hb.pid != plr.id){
-              var plr2 = this.getPlayer(hb.pid);
+            if(hbMain.pid != plr.id){
+              var plr2 = this.getPlayer(hbMain.pid);
               if(plr2){
-                console.log(boxCollide(hb.poly(plr2),plr.poly()));
-                if(boxCollide(hb.poly(plr2),plr.poly())){
-                  plr2.receive_attack(plr2,plr,hb);
+                console.log(boxCollide(hbMain.poly(plr2),plr.poly()));
+                if(boxCollide(hbMain.poly(plr2),plr.poly())){
+                  plr2.receive_attack(plr2,plr,hbMain);
                 }
               }
             }

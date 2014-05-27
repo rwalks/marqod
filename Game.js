@@ -265,7 +265,7 @@ function GamePro() {
           var plr = game_engine.game_state.players[p];
           //draw player
           plr.draw(_canvasBufferContext)
-
+/*
               var points = plr.poly();
           if(points){
               var start = points.pop();
@@ -277,7 +277,7 @@ function GamePro() {
               }
               _canvasBufferContext.closePath();
               _canvasBufferContext.fill();
-          }
+          }*/
           //draw healthbar
      /*     _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
           _canvasBufferContext.fillRect(plr.position.x - 13,
@@ -291,6 +291,7 @@ function GamePro() {
                                         3);
                                         */
         }
+/*
         if (game_engine.game_state.hitBoxes != null){
           for(h in game_engine.game_state.hitBoxes){
             var hb = game_engine.game_state.hitBoxes[h];
@@ -309,6 +310,7 @@ function GamePro() {
             }
           }
         }
+*/
         if (game_engine.game_state.ammos != null){
           for(a in game_engine.game_state.ammos){
             var am = game_engine.game_state.ammos[a];
