@@ -9,7 +9,6 @@ var eng = require('./GameEngine.js');
 var playerModel = require('./Player.js');
 var weapon = require('./Weapon.js');
 var ammo = require('./Ammo.js');
-var wall = require('./Wall.js');
 var account = require('./Account.js');
 var players = {};
 var nonces = {};
@@ -72,7 +71,6 @@ io.sockets.on('connection', function (socket) {
       players[socket.id].playerId = pid;
       socket.emit('init',{'playerId' : pid})
       if (firstConnect){
-        engine.spawnWave(1);
         firstConnect = false;
       }
     }
@@ -106,6 +104,7 @@ function handle_message(socket, msg) {
     if (msg){
       if (validatePlayer(socket, msg.playerId)){
         engine.queue_message(msg);
+        socket.broadcast.emit("player_event",msg);
       }
    }
 }
@@ -212,7 +211,6 @@ function dropPlayer(socket) {
 
 function tick() {
   engine.deleteSweep();
-  engine.waveCheck(firstConnect);
   engine.Update();
   io.sockets.emit('push',engine.game_state);
 }

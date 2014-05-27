@@ -13,10 +13,13 @@ function GamePro() {
     var game_engine;
     var socket;
     var player;
+    var player_img;
+    var bg_img;
     var gameActive = false;
     var banner = new Banner();
     var uiMode = 'login';
     var salt;
+    var loaded = false;
 
     this.Initialize = function () {
         socket = io.connect();
@@ -29,12 +32,7 @@ function GamePro() {
             _canvasBuffer.width = _canvas.width;
             _canvasBuffer.height = _canvas.height;
             _canvasBufferContext = _canvasBuffer.getContext('2d');
-
-            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, wall);
-            this.waveCount = $("#waveCount");
-            this.waveCount.hide();
-            this.killCount = $("#killCount");
-            this.killCount.hide();
+            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, shitLord, hitBox);
             this.mainMenu = $("#mainMenu");
             this.mainMenu.hide();
             this.inventoryMenu = $("#inventory");
@@ -44,7 +42,7 @@ function GamePro() {
         return false;
     }
 
-    function LoadContent () {
+    function LoadContent (data) {
         var cookie = $.cookie("progame");
         if (cookie != null) {
             //user already finished some maps
@@ -61,13 +59,25 @@ function GamePro() {
           event.preventDefault();
             LocalEvent(event);
         });
+        $(document).bind('contextmenu', function (event) {
+          event.preventDefault();
+          LocalEvent(event);
+          return false;
+        });
 
   	//images
         //imagebg = new Image();
         //imagebg.src = 'images/marqod.png';
-        $("#waveCount").show();
-        $("#killCount").show();
         uiMode = "game";
+        bg_img = new Image;
+        bg_img.src = "images/paperBG.png";
+        player_img = new Image;
+        player_img.onload = function(){
+          setPlayer(data);
+          game_engine.player_img = player_img;
+          gameActive = true;
+        }
+        player_img.src = "images/shitLord.png";
     }
 
     this.Run = function () {
@@ -133,10 +143,11 @@ function GamePro() {
       if (event != null){
         var msg = '';
         switch(event.type) {
+          case 'contextmenu':
           case 'click':
             if (event.target.id == 'canvas' || event.target.class == 'controls'){
               mousePos = getPosition(event);
-              msg = player.click_message('click',mousePos);
+              msg = player.click_message('click',mousePos,event.which);
             }
             break;
           case 'keydown':
@@ -160,15 +171,19 @@ function GamePro() {
       });
       socket.on('init', function (data) {
         clearMenus();
-        setPlayer(data);
-        LoadContent();
-        gameActive = true;
+        LoadContent(data);
         setInterval(function() {document.proGame.updateMenus()}, 1000 / 10);
       });
 
       socket.on('push', function (data) {
         if (gameActive) {
           game_engine.pushData = data;
+        }
+      });
+
+      socket.on('player_event', function (msg) {
+        if (gameActive) {
+          game_engine.queue_message(msg);
         }
       });
 
@@ -205,7 +220,7 @@ function GamePro() {
     }
 
     function setPlayer(msg) {
-      player = new playerModel.Player(msg.playerId, false, weapon, ammo);
+      player = new playerModel.Player(msg.playerId, false, player_img, weapon, ammo, hitBox, shitLord);
     }
 
     function getPosition(e) {
@@ -234,17 +249,37 @@ function GamePro() {
         _canvasBufferContext.globalCompositeOperation="destination-over";
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
+        if(bg_img){
+        _canvasBufferContext.drawImage(bg_img,
+		      0,0,
+		      800,600,
+          0,0,
+		      800,600
+	             );
+      }
+
         if (uiMode == "login" || uiMode == "menu") {
             banner.draw(_canvasBufferContext);
         }
         for(p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
           //draw player
-          _canvasBufferContext.fillStyle = plr.playerColor[p % 6];
-          _canvasBufferContext.font = '12px Georgia';
-          _canvasBufferContext.fillText(plr.artAsset(),plr.position.x-15,plr.position.y);
+          plr.draw(_canvasBufferContext)
+
+              var points = plr.poly();
+          if(points){
+              var start = points.pop();
+              _canvasBufferContext.fillStyle = 'rgba(250,0,0,0.5)';
+              _canvasBufferContext.beginPath();
+              _canvasBufferContext.moveTo(start[0],start[1]);
+              for(p in points){
+                _canvasBufferContext.lineTo(points[p][0],points[p][1]);
+              }
+              _canvasBufferContext.closePath();
+              _canvasBufferContext.fill();
+          }
           //draw healthbar
-          _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
+     /*     _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
           _canvasBufferContext.fillRect(plr.position.x - 13,
                                         plr.position.y - 20,
                                         30,
@@ -254,6 +289,25 @@ function GamePro() {
                                         plr.position.y - 20,
                                         30 * (plr.health / plr.maxHealth),
                                         3);
+                                        */
+        }
+        if (game_engine.game_state.hitBoxes != null){
+          for(h in game_engine.game_state.hitBoxes){
+            var hb = game_engine.game_state.hitBoxes[h];
+            var pl = game_engine.getPlayer(hb.pid);
+            if(pl){
+              var points = hb.poly(pl);
+              var start = points.pop();
+              _canvasBufferContext.fillStyle = 'rgba(250,0,250,0.5)';
+              _canvasBufferContext.beginPath();
+              _canvasBufferContext.moveTo(start[0],start[1]);
+              for(p in points){
+                _canvasBufferContext.lineTo(points[p][0],points[p][1]);
+              }
+              _canvasBufferContext.closePath();
+              _canvasBufferContext.fill();
+            }
+          }
         }
         if (game_engine.game_state.ammos != null){
           for(a in game_engine.game_state.ammos){
@@ -265,26 +319,6 @@ function GamePro() {
             }
           }
         }
-        if (game_engine.game_state.beasts != null){
-          for(a in game_engine.game_state.beasts){
-            var am = game_engine.game_state.beasts[a];
-            if (am) {
-              _canvasBufferContext.fillStyle = 'rgba(250,0,250,1.0)';
-              _canvasBufferContext.font = '20px Helvetica';
-              _canvasBufferContext.fillText(am.artAsset(),am.position.x,am.position.y);
-            }
-          }
-        }
-         if (game_engine.game_state.walls != null){
-          for(w in game_engine.game_state.walls){
-            var wall = game_engine.game_state.walls[w];
-            if (wall) {
-              _canvasBufferContext.fillStyle = 'rgba(220,220,220,1.0)';
-              _canvasBufferContext.font = '20px Arial';
-              _canvasBufferContext.fillText(wall.artAsset(),wall.position.x,wall.position.y);
-            }
-          }
-        }
         //this.draw_commandBar();
         //draw buffer on screen
         _canvasContext.clearRect(0, 0, _canvas.width, _canvas.height);
@@ -293,10 +327,6 @@ function GamePro() {
     }
 
     this.updateMenus = function() {
-      this.waveCount.text("WAVE: " + game_engine.waveCount);
-      if (game_engine.game_state.players[player.id]){
-        this.killCount.text("KILLS: " + game_engine.game_state.players[player.id].kills);
-      }
     }
 
 }

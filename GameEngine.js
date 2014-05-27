@@ -1,16 +1,16 @@
 var WIDTH = 800;
-var HEIGHT = 700;
+var HEIGHT = 600;
 
 (function(exports) {
 
-exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
+exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM){
   //support browser and server
     var server = serv;
     var playerModel = server ? require('./Player.js') : playerM;
     var ammo = server ? require('./Ammo.js') : ammoM;
     var weapon = server ? require('./Weapon.js') : weaponM;
-    var beast = server ? require('./Beast.js') : beastM;
-    var wall = server ? require('./Wall.js') : wallM;
+    var shitLord = server ? require('./ShitLord.js') : shitLordM;
+    var hitBox = server ? require('./HitBox.js') : hitBoxM;
 
     this.game_state = {};
     this.messageBuffer = [];
@@ -18,16 +18,14 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
     game_engine = this;
     var lastUpdate = +new Date;
     var lastMessage = +new Date;
-    var deleteQueue = {'players': [], 'ammos': [], 'beasts': [], 'walls': []};
+    var deleteQueue = {'players': [], 'ammos': [], 'hitBoxes':[]};
     var playerIndex = 1;
     var ammoIndex = 1;
-    var beastIndex = 1;
-    var wallIndex = 1;
-    this.waveCount = 1;
     var gameBounds = {x: WIDTH, y: HEIGHT};
     var collisions;
     this.pushData;
-    var objTypes = ['ammos','players', 'beasts', 'walls'];
+    var objTypes = ['ammos','players','hitBoxes'];
+    this.player_img = null;
 
     this.Initialize = function () {
       for (ob in objTypes) {
@@ -40,7 +38,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
         playerIndex += 1;
         pid = playerIndex;
       }
-      var p = new playerModel.Player(pid, server, weapon, ammo);
+      var p = new playerModel.Player(pid, server, this.player_img, weapon, ammo, hitBox, shitLord);
       this.game_state.players[pid] = p;
       return pid;
     }
@@ -59,10 +57,9 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
     this.serverPush = function() {
       if (!this.pushData) {return;}
       if (typeof game_state === 'undefined'){
-        game_state = {players: {}, ammos: {}, beasts: {}, walls : {}};
+        game_state = {players: {}, ammos: {}, hitBoxes: {}};
       }
       lastMessage = this.pushData.lastMessage;
-      this.waveCount = this.pushData.waveCount;
 
       for (ob in objTypes) {
         for (i in this.pushData[objTypes[ob]]) {
@@ -109,67 +106,98 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
           var pl = this.game_state[objTypes[ob]][index];
           if (pl){
             try{
-              (objTypes[ob] == 'beasts') ? pl.update(lastUpdate,this.game_state) :
-                                           pl.update(lastUpdate);
-              if ((objTypes[ob] != 'beasts' || Object.keys(this.game_state.players).length == 0) &&
-                    this.checkBounds(pl.position)){
-                this.dropObject(index,objTypes[ob]);
-              }
+              pl.update(lastUpdate);
             } catch (e) {}
           }
 
          }
       }
+      this.objectCleanup();
       this.checkCollisions();
       lastUpdate = +new Date;
-      this.game_state['waveCount'] = this.waveCount;
     }
 
-    // aka THE BEAST LOOP
+    this.objectCleanup = function(){
+      for (i in this.game_state.hitBoxes){
+        var obj = this.game_state.hitBoxes[i];
+        if (!obj.valid){
+          this.dropObject(obj.id,'hitBoxes');
+        }
+      }
+    }
+
+    var boxCollide = function(b1,b2){
+      if(!b1 || !b2){return false;}
+      var maxX = b1[0][0];
+      var minX = b1[0][0];
+      var maxY = b1[0][1];
+      var minY = b1[0][1];
+      for(p in b1){
+        if(b1[p][0] > maxX){maxX = b1[p][0];}
+        if(b1[p][0] < minX){minX = b1[p][0];}
+        if(b1[p][1] > maxY){maxY = b1[p][1];}
+        if(b1[p][1] < minY){minY = b1[p][1];}
+      }
+      var maxX2 = b2[0][0];
+      var minX2 = b2[0][0];
+      var maxY2 = b2[0][1];
+      var minY2 = b2[0][1];
+      for(p in b2){
+        if(b2[p][0] > maxX2){maxX2 = b2[p][0];}
+        if(b2[p][0] < minX2){minX2 = b2[p][0];}
+        if(b2[p][1] > maxY2){maxY2 = b2[p][1];}
+        if(b2[p][1] < minY2){minY2 = b2[p][1];}
+      }
+      console.log(minY + ".." + maxY);
+      console.log(minX + ".." + maxX);
+      console.log(minY2 + ".." + maxY2);
+      console.log(minX2 + ".." + maxX2);
+      var ret = (minY > maxY2 || maxY < minY2 || minX > maxX2 || maxX < minX2);
+      console.log(ret);
+      return ret;
+    }
+
     this.checkCollisions = function() {
-      for (var b in this.game_state.beasts) {
-        var beast = this.game_state.beasts[b];
-        for (var p in this.game_state.players) {
-          //distance check for now
-          var d = this.distance(beast,this.game_state.players[p]);
-          if (d < 50){
-            var dmg = beast.attack(d);
-            if (dmg) {
-              if (this.game_state.players[p].wound(dmg)){
-                this.dropObject(p,'players');
+      //hb on hb
+      var collide = true;
+      for(h in this.game_state.hitBoxes){
+        var hbMain = this.game_state.hitBoxes[h];
+        if(hbMain){
+          for(t in this.game_state.hitBoxes){
+            var hbTest = this.game_state.hitBoxes[t];
+            if(hbTest){
+              if (hbMain.id != hbTest.id){
+                var plr1 = this.getPlayer(hbMain.pid);
+                var plr2 = this.getPlayer(hbTest.pid);
+                if(plr1 && plr2){
+                  if(boxCollide(hbMain.poly(plr1),hbTest.poly(plr2))){
+                    if(hbMain.shield && hbTest.shield){
+                     //nothing?
+                    }else if(hbMain.shield && !hbTest.shield){
+                      plr.receive_attack(plr1,plr2,hbMain,hbTest);
+                    }else {
+                      //apply forces
+                    }
+                  }
+                }
               }
             }
           }
-        }
-        for (var w in this.game_state.walls) {
-          var wall = this.game_state.walls[w];
-          var d = this.distance(beast, wall);
-          if(d < 50) {
-            var dmg = beast.attack(d);
-            if(dmg) {
-              if(wall.wound(dmg)) {
-                this.dropObject(w,'walls');
-              }
-            }
-          }
-        }
-        for (var a in this.game_state.ammos) {
-          //distance check for now
-          var d = this.distance(this.game_state.beasts[b],this.game_state.ammos[a]);
-          if (d < 10){
-            var dmg = this.game_state.ammos[a].damage();
-            if (dmg) {
-              if (this.game_state.beasts[b].wound(dmg[0])){
-                this.game_state.players[this.game_state.ammos[a].playerId].kills += 1;
-                this.dropObject(b,'beasts');
-              }
-              if (dmg[1]) {
-                this.dropObject(a,'ammos');
+          for(p in this.game_state.players){
+            var plr = this.game_state.players[p];
+            if(hb.pid != plr.id){
+              var plr2 = this.getPlayer(hb.pid);
+              if(plr2){
+                console.log(boxCollide(hb.poly(plr2),plr.poly()));
+                if(boxCollide(hb.poly(plr2),plr.poly())){
+                  plr2.receive_attack(plr2,plr,hb);
+                }
               }
             }
           }
         }
       }
+      //char on terrain
     }
 
     this.checkBounds = function(position){
@@ -198,7 +226,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
           for (a in objs) {
             var aid = this.nextAmmoId();
             objs[a].id = aid;
-            this.game_state.ammos[aid] = objs[a];
+            this.game_state.hitBoxes[aid] = objs[a];
           }
           }
         }
@@ -209,21 +237,10 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       return ammoIndex;
     }
 
-    this.nextBeastId = function() {
-      beastIndex += 1;
-      return beastIndex;
-    }
-
-    this.nextWallId = function() {
-      wallIndex += 1;
-      return wallIndex;
-    }
-
     this.addObject = function(id, type) {
       if (type == 'players'){ this.addPlayer(id); }
       if (type == 'ammos'){ this.addAmmo(id); }
-      if (type == 'beasts'){ this.addBeast(id); }
-      if (type === 'walls') {this.addWall(id); }
+      if (type == 'hitBoxes'){ this.addHitbox(id); }
     }
 
     this.dropObject = function(id, type) {
@@ -244,65 +261,21 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       return aid;
     }
 
-    this.addBeast = function(id, origin) {
-      if (id == null) {
-        id = this.nextBeastId();
-      }
-      var b = new beast.Beast(id,origin,this.waveCount);
-      this.game_state.beasts[id] = b;
-      return id;
-    }
-    
-    this.addWall = function(id, pos) {
-      if(id == null) {
-        id = this.nextWallId();
-      }
-      var w = new wall.Wall(id, {x:200,y:200});
-      this.game_state.walls[id] = w;
-      return id;
-    }
 
-  this.spawnWave = function(level) {
-    var spawnNo = 10;
-    for (var i=0; i<spawnNo; i++){
-      var position = {};
-      if (i % 2 == 0){
-        position.x = randomNumber(0,WIDTH);
-        position.y = (i % 3 == 0) ? HEIGHT + 10 : -10;
-      }else {
-        position.x = (i % 3 == 0) ? WIDTH + 10 : -10;
-        position.y = randomNumber(0,HEIGHT);
+    this.addHitbox = function(hid) {
+      if (hid == null) {
+        hid = this.nextAmmoId();
       }
-      this.addBeast(null,position);
+      var a = new hitBox.HitBox(hid);
+      this.game_state.hitBoxes[hid] = a;
+      return hid;
     }
-    this.updatePlayersWave();
-    //this.addWall(null,{x:450,y:400});
-  }
-
-  this.updatePlayersWave = function(){
-    for (p in this.game_state.players){
-      this.game_state.players[p].highWave = this.waveCount;
-    }
-  }
 
   this.deleteSweep = function() {
     for (i in objTypes){
       var t = objTypes[i];
       for (j in deleteQueue[t]) {
         delete this.game_state[t][deleteQueue[t][j]];
-      }
-    }
-  }
-
-  this.waveCheck = function(hold){
-    if (!hold) {
-      if (Object.keys(this.game_state.players).length > 0){
-        if (Object.keys(this.game_state.beasts).length <= 0){
-          this.waveCount += 1;
-          this.spawnWave(this.waveCount);
-        }
-      }else {
-        this.waveCount = 0;
       }
     }
   }
