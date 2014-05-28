@@ -28,6 +28,7 @@ var app = http.createServer(handler),
 io.set('log level', 1); //reduce lawg)
 
 var engine = new eng.GameEngine(true,false);
+engine.generate_level();
 engine.Run();
 
 function handler (req, res) {

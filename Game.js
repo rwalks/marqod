@@ -14,6 +14,7 @@ function GamePro() {
     var socket;
     var player;
     var player_img;
+    var tile_img;
     var bg_img;
     var gameActive = false;
     var banner = new Banner();
@@ -37,7 +38,7 @@ function GamePro() {
             _canvasBuffer.width = _canvas.width;
             _canvasBuffer.height = _canvas.height;
             _canvasBufferContext = _canvasBuffer.getContext('2d');
-            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, shitLord, hitBox);
+            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, shitLord, hitBox, terrain, tile);
             this.mainMenu = $("#mainMenu");
             this.mainMenu.hide();
             this.inventoryMenu = $("#inventory");
@@ -76,10 +77,16 @@ function GamePro() {
         uiMode = "game";
         bg_img = new Image;
         bg_img.src = "images/paperBG.png";
+        tile_img = new Image;
+        tile_img.src = "images/tile_set.png";
+        tile_img.onload = function(){
+          game_engine.tile_img = tile_img;
+        }
         player_img = new Image;
         player_img.onload = function(){
           setPlayer(data);
           game_engine.player_img = player_img;
+          game_engine.generate_level();
           gameActive = true;
         }
         player_img.src = "images/shitLord.png";
@@ -225,7 +232,7 @@ function GamePro() {
     }
 
     function setPlayer(msg) {
-      player = new playerModel.Player(msg.playerId, false, player_img, weapon, ammo, hitBox, shitLord);
+      player = new playerModel.Player(msg.playerId, false, player_img, game_engine.playerModels);
       player_id = player.id;
     }
 
@@ -327,6 +334,13 @@ function GamePro() {
               _canvasBufferContext.fillText("*",am.position.x,am.position.y);
             }
           }
+        }
+        if(game_engine.terrainReady){
+        for(x in game_engine.tiles){
+          for(y in game_engine.tiles[x]){
+            game_engine.tiles[x][y].draw(_canvasBufferContext);
+          }
+        }
         }
         //this.draw_commandBar();
         //draw buffer on screen

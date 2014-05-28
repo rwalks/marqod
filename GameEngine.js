@@ -3,7 +3,7 @@ var HEIGHT = 600;
 
 (function(exports) {
 
-exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM){
+exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM, terrainM, tileM){
   //support browser and server
     var server = serv;
     var playerModel = server ? require('./Player.js') : playerM;
@@ -11,6 +11,9 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
     var weapon = server ? require('./Weapon.js') : weaponM;
     var shitLord = server ? require('./ShitLord.js') : shitLordM;
     var hitBox = server ? require('./HitBox.js') : hitBoxM;
+    var terrain = server ? require('./Terrain.js') : terrainM;
+    var tile = server ? require('./Tile.js') : tileM;
+    this.playerModels = {'weapon': weapon,'ammo':ammo,'hitBox':hitBox,'shitLord':shitLord}
 
     this.game_state = {};
     this.messageBuffer = [];
@@ -26,7 +29,12 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
     this.pushData;
     var objTypes = ['ammos','players','hitBoxes'];
     this.player_img = null;
+    this.tile_img = null;
     var respawn_queue = {};
+    this.terrainReady=false;
+
+    this.levelHash = new terrain.Terrain().levelOne();
+    this.tiles = {};
 
     this.Initialize = function () {
       for (ob in objTypes) {
@@ -34,12 +42,28 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       }
     }
 
+    this.generate_level = function(){
+      for(y in this.levelHash){
+        for(x in this.levelHash[y]){
+          var symb = this.levelHash[y][x];
+          if(symb != "."){
+            var t = new tile.Tile({'x':x*20,'y':y*20},symb,this.tile_img);
+            if(!this.tiles[t.position.x]){
+              this.tiles[t.position.x] = {};
+            }
+            this.tiles[t.position.x][t.position.y] = t;
+          }
+        }
+      }
+      this.terrainReady = true;
+    }
+
     this.addPlayer = function(pid) {
       if (!pid) {
         playerIndex += 1;
         pid = playerIndex;
       }
-      var p = new playerModel.Player(pid, server, this.player_img, weapon, ammo, hitBox, shitLord);
+      var p = new playerModel.Player(pid, server, this.player_img, this.playerModels);
       this.game_state.players[pid] = p;
       return pid;
     }
@@ -115,7 +139,11 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
           var pl = this.game_state[objTypes[ob]][index];
           if (pl){
             try{
-              pl.update(lastUpdate);
+              if(objTypes[ob] == 'players'){
+                pl.update(lastUpdate,this.tiles);
+              }else{
+                pl.update(lastUpdate);
+              }
             } catch (e) {}
           }
 
@@ -202,7 +230,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       }
       for(p in this.game_state.players){
         var plr = this.game_state.players[p];
-        if(plr.position.x > (gameBounds.x + 60) || plr.position.x < -60){
+        if(plr.position.x > (gameBounds.x + 60) || plr.position.x < -60 || plr.position.y > (gameBounds.y + 60)){
           this.killPlayer(plr.id);
         }
       }

@@ -1,6 +1,6 @@
 (function(exports) {
 
-exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
+exports.Player = function(pid,server,player_img,models) {
 
 
   if (!(typeof require === 'undefined')){
@@ -9,13 +9,15 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
     var shitLord = require('./ShitLord.js');
   }
 
+  var ammo = models.ammo;
+  var hitBox = models.hitBox;
+  var shitLord = models.shitLord;
   this.id = pid;
   this.position = {};
   this.position.x = 100;
   this.position.y = 100;
   this.velocity = {x:0,y:0};
   this.deltaV = {x:0,y:0};
-  this.playerWeapon = new weapon.Weapon(this.id,ammo);
   var serverTime = server ? 0 : 0;
   this.maxHealth = 100;
   this.health = 100;
@@ -27,6 +29,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
   this.kills = 0;
   this.playerDirection = 0;
   this.jump_ready = false;
+  this.walking = false;
   this.jump_count = 0;
   this.attack1_count = 0;
   this.attack2_count = 0;
@@ -63,7 +66,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
     return ret;
   }
 
-  this.update = function(lastUpdate){
+  this.update = function(lastUpdate,tiles){
     var interv = (attack_states[this.state]) ? attackAnimationInterval : animationInterval;
     if(animationCount == interv){
       this.animationFrame += 1;
@@ -77,7 +80,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
     }else if (this.animationFrame == animationLength) {
       this.animationFrame = 0;
       if(attack_states[this.state]){
-        if(this.jump_ready){
+        if(this.walking){
           this.state = "stand";
         }else{
           this.state = "jump";
@@ -106,7 +109,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
     //air friction
     this.deltaV.x = this.deltaV.x * 0.9;
     this.deltaV.y = this.deltaV.y * 0.9;
-    this.check_terrain();
+    this.check_terrain(tiles);
     this.position.x += this.deltaV.x;
     this.position.y += this.deltaV.y;
     this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
@@ -118,32 +121,70 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
         this.state == "air1"    ||
         this.state == "air2"){
 
-    }else if (!this.jump_ready){
+    }else if (!this.walking){
       this.state = "jump";
     }else if (moveFlags.left || moveFlags.right){
       this.state = "walk";
     }else{
       this.state = "stand";
     }
+    // console.log(this.state+" :: " +this.walking);
   }
 
-  this.check_terrain = function(){
+  this.check_terrain = function(tiles){
     var modX = this.position.x + this.deltaV.x;
     var modY = this.position.y + this.deltaV.y;
-    if (modY >= 555) {
-      if(!this.jump_ready){
+    var groundCol = false;
+    for(x in tiles){
+      if (Math.abs(modX - x) < 27){
+        for(y in tiles[x]){
+          if (Math.abs(modY - y) < 45){
+            var til = tiles[x][y];
+            if(pointInTile([modX + 27, modY],til.position)){
+              this.deltaV.x = 0;
+            }else if(pointInTile([modX - 27, modY],til.position)){
+              this.deltaV.x = 0;
+            }else if(pointInTile([modX, modY+45],til.position)){
+              //this.deltaV.y -= ((modY+45) - til.position.y);
+              this.deltaV.y = 0;
+              groundCol = true;
+            }else if(pointInTile([modX, modY-45],til.position)){
+              this.deltaV.y = 0;
+            }else if(pointInTile([modX+22,modY+35],til.position)){
+              if(this.deltaV.y > 0){this.deltaV.y = 0;}
+              if(this.deltaV.x > 0){this.deltaV.x = 0;}
+            }else if(pointInTile([modX+22,modY-35],til.position)){
+              if(this.deltaV.y < 0){this.deltaV.y = 0;}
+              if(this.deltaV.x > 0){this.deltaV.x = 0;}
+            }else if(pointInTile([modX-22,modY-35],til.position)){
+              if(this.deltaV.y < 0){this.deltaV.y = 0;}
+              if(this.deltaV.x < 0){this.deltaV.x = 0;}
+            }else if(pointInTile([modX-22,modY+35],til.position)){
+              if(this.deltaV.y > 0){this.deltaV.y = 0;}
+              if(this.deltaV.x < 0){this.deltaV.x = 0;}
+            }else{
+              this.walking = false;
+            }
+
+          }
+        }
+      }
+    }
+    if(groundCol){
+      if(this.state == "jump"){
         this.state = "land";
         this.animationFrame = 0;
         animationCount = 0;
       }
       this.jump_ready = true;
+      this.walking = true;
       used_d_jump = false;
-      if(this.deltaV.y > 0){
-        this.deltaV.y -= modY-555;
-      }
-    }else {
-      this.jump_ready = false;
     }
+  }
+
+  var pointInTile = function(point,tileP){
+    var ret = !(point[0] < tileP.x || point[0] > (tileP.x + 20) || point[1] < tileP.y || point[1] > (tileP + 20));
+    return ret;
   }
 
   this.click = function(coords,which){
@@ -154,13 +195,13 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
     switch(which){
       case 1:
         if(attack_states[this.state]){break;}
-        this.state = (!this.jump_ready) ? "air1" : "attack1";
+        this.state = (!this.walking) ? "air1" : "attack1";
         this.animationFrame = 0;
         animationCount = 0;
         msg = character.create_attack(this.state,hitBox,this);
         break;
       case 3:
-        if(!this.jump_ready){
+        if(!this.walking){
           if(!used_d_jump){
             this.state = "air2";
             this.velocity.y -= 600;
@@ -204,6 +245,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
         if (state && this.jump_ready){
           this.velocity.y -= 800;
           this.jump_ready = false;
+          this.walking = false;
           this.animationFrame = 0;
           animationCount = 0;
         }
@@ -308,6 +350,33 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
     }
     return msg;
   }
+
+    var boxCollide = function(b1,b2){
+      if(!b1 || !b2){return false;}
+      var maxX = b1[0][0];
+      var minX = b1[0][0];
+      var maxY = b1[0][1];
+      var minY = b1[0][1];
+      for(p in b1){
+        if(b1[p][0] > maxX){maxX = b1[p][0];}
+        if(b1[p][0] < minX){minX = b1[p][0];}
+        if(b1[p][1] > maxY){maxY = b1[p][1];}
+        if(b1[p][1] < minY){minY = b1[p][1];}
+      }
+      var maxX2 = b2[0][0];
+      var minX2 = b2[0][0];
+      var maxY2 = b2[0][1];
+      var minY2 = b2[0][1];
+      for(p in b2){
+        if(b2[p][0] > maxX2){maxX2 = b2[p][0];}
+        if(b2[p][0] < minX2){minX2 = b2[p][0];}
+        if(b2[p][1] > maxY2){maxY2 = b2[p][1];}
+        if(b2[p][1] < minY2){minY2 = b2[p][1];}
+      }
+      var ret = !((minY > maxY2) || (maxY < minY2) || (minX > maxX2) || (maxX < minX2));
+      return ret;
+    }
+
 }
 
 
