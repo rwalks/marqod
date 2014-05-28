@@ -209,9 +209,18 @@ function dropPlayer(socket) {
   } catch (e) {}
 }
 
+function getPlayerSocket(pid){
+  for(p in players){
+    if(players[p].playerId == pid){
+      return p;
+    }
+  }
+}
+
 function tick() {
   engine.deleteSweep();
   engine.Update();
+
   io.sockets.emit('push',engine.game_state);
 }
 

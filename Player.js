@@ -35,6 +35,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
   this.state = "stand";
   var attack_states = {"attack1":true,"attack2":true,"air1":true,"air2":true,"land":true}
   var used_d_jump = false;
+  var used_jump = false;
   var character = shitLord.ShitLord();
 
   this.receive_attack = function(player, target, hitBoxFriend, hitBoxFoe){
@@ -99,7 +100,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
 
     var deltaT = Date.now() - lastUpdate;
 
-    this.velocity.y += 20; //GRAVITAS
+    this.velocity.y += 30; //GRAVITAS
     this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
     this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
     //air friction
@@ -147,11 +148,12 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
 
   this.click = function(coords,which){
     var origin = {x : this.position.x, y : this.position.y}
-    //return this.playerWeapon.fire(origin,coords);
+
     var msg;
     character = shitLord;
     switch(which){
       case 1:
+        if(attack_states[this.state]){break;}
         this.state = (!this.jump_ready) ? "air1" : "attack1";
         this.animationFrame = 0;
         animationCount = 0;
@@ -168,6 +170,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
             msg = character.create_attack(this.state,hitBox,this);
           }
         }else{
+          if(attack_states[this.state]){break;}
           this.state = "attack2";
           this.animationFrame = 0;
           animationCount = 0;
@@ -262,6 +265,7 @@ exports.Player = function(pid,server,player_img,weapon,ammo,hitBox,shitLord) {
    this.velocity = data.velocity;
 
    this.playerDirection = data.playerDirection;
+   this.id = data.id;
   }
 
   this.click_message = function(type,coords,which) {

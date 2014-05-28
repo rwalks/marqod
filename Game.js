@@ -20,6 +20,11 @@ function GamePro() {
     var uiMode = 'login';
     var salt;
     var loaded = false;
+    var player_id;
+
+    this.engine = function(){
+      return game_engine();
+    }
 
     this.Initialize = function () {
         socket = io.connect();
@@ -221,6 +226,7 @@ function GamePro() {
 
     function setPlayer(msg) {
       player = new playerModel.Player(msg.playerId, false, player_img, weapon, ammo, hitBox, shitLord);
+      player_id = player.id;
     }
 
     function getPosition(e) {
@@ -277,7 +283,8 @@ function GamePro() {
               }
               _canvasBufferContext.closePath();
               _canvasBufferContext.fill();
-          }*/
+          }
+*/
           //draw healthbar
      /*     _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
           _canvasBufferContext.fillRect(plr.position.x - 13,

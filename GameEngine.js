@@ -26,6 +26,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
     this.pushData;
     var objTypes = ['ammos','players','hitBoxes'];
     this.player_img = null;
+    var respawn_queue = {};
 
     this.Initialize = function () {
       for (ob in objTypes) {
@@ -87,6 +88,14 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       if (!server) {
         this.serverPush();
         this.applyClientBuffer();
+      }else {
+        for(pid in respawn_queue){
+          respawn_queue[pid] -= 1;
+          if(respawn_queue[pid] <= 0){
+            this.addPlayer(pid);
+            delete respawn_queue[pid];
+          }
+        }
       }
 
       while (message = this.messageBuffer.pop()){
@@ -148,12 +157,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
         if(b2[p][1] > maxY2){maxY2 = b2[p][1];}
         if(b2[p][1] < minY2){minY2 = b2[p][1];}
       }
-      console.log(minY + ".." + maxY);
-      console.log(minX + ".." + maxX);
-      console.log(minY2 + ".." + maxY2);
-      console.log(minX2 + ".." + maxX2);
-      var ret = (minY > maxY2 || maxY < minY2 || minX > maxX2 || maxX < minX2);
-      console.log(ret);
+      var ret = !((minY > maxY2) || (maxY < minY2) || (minX > maxX2) || (maxX < minX2));
       return ret;
     }
 
@@ -166,7 +170,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
           for(t in this.game_state.hitBoxes){
             var hbTest = this.game_state.hitBoxes[t];
             if(hbTest){
-              if (hbMain.id != hbTest.id){
+              if (hbMain.id != hbTest.id && hbMain.pid != hbTest.pid){
                 var plr1 = this.getPlayer(hbMain.pid);
                 var plr2 = this.getPlayer(hbTest.pid);
                 if(plr1 && plr2){
@@ -176,7 +180,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
                     }else if(hbMain.shield && !hbTest.shield){
                       plr.receive_attack(plr1,plr2,hbMain,hbTest);
                     }else {
-                      //apply forces
+                      
                     }
                   }
                 }
@@ -188,7 +192,6 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
             if(hbMain.pid != plr.id){
               var plr2 = this.getPlayer(hbMain.pid);
               if(plr2){
-                console.log(boxCollide(hbMain.poly(plr2),plr.poly()));
                 if(boxCollide(hbMain.poly(plr2),plr.poly())){
                   plr2.receive_attack(plr2,plr,hbMain);
                 }
@@ -197,7 +200,12 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
           }
         }
       }
-      //char on terrain
+      for(p in this.game_state.players){
+        var plr = this.game_state.players[p];
+        if(plr.position.x > (gameBounds.x + 60) || plr.position.x < -60){
+          this.killPlayer(plr.id);
+        }
+      }
     }
 
     this.checkBounds = function(position){
@@ -243,6 +251,23 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       if (type == 'hitBoxes'){ this.addHitbox(id); }
     }
 
+    this.queue_respawn = function(pid){
+      respawn_queue[pid] = 40;
+    }
+
+    this.killPlayer = function(pid){
+      var p = this.getPlayer(pid);
+      if(p){
+        var killer_id = p.last_hit;
+        var killer = this.getPlayer(killer_id);
+        if(killer){
+          killer.kills += 1;
+        }
+        this.dropObject(pid,'players');
+        this.queue_respawn(pid);
+      }
+    }
+
     this.dropObject = function(id, type) {
       if (server) {
         this.game_state[type][id] = null;
@@ -276,6 +301,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       var t = objTypes[i];
       for (j in deleteQueue[t]) {
         delete this.game_state[t][deleteQueue[t][j]];
+        delete deleteQueue[t][j];
       }
     }
   }

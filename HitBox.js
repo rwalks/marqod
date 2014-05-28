@@ -1,6 +1,6 @@
 (function(exports) {
 
-exports.HitBox = function(id,points,force,type,owner,duration,shield,rOffset) {
+exports.HitBox = function(id,points,force,type,owner,duration,shield,rOffset,force_vector) {
   this.id = id;
   this.points = points;
   this.type = type;
@@ -10,6 +10,7 @@ exports.HitBox = function(id,points,force,type,owner,duration,shield,rOffset) {
   this.shield = shield;
   var rOffset = rOffset;
   this.force = force;
+  this.force_vector = force_vector;
 
   this.update = function(lastUpdate){
     this.step += 1;
@@ -36,6 +37,9 @@ exports.HitBox = function(id,points,force,type,owner,duration,shield,rOffset) {
    this.steps = data.steps;
    this.valid = data.valid;
    this.player = data.pid;
+   this.force = data.force;
+   this.force_vector = data.force_vector;
+   this.shield = data.shield;
   }
 }
 
