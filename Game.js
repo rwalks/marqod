@@ -88,6 +88,10 @@ function GamePro() {
         uiMode = "game";
         bg_img = new Image;
         bg_img.src = "images/paperBG.png";
+        big_nums_img = new Image;
+        big_nums_img.src = "images/Numbers.png";
+        lil_nums_img = new Image;
+        lil_nums_img.src = "images/smallNumbers.png";
         hud_img = new Image;
         hud_img.src = "images/HUD_Sheet.png";
         tile_img = new Image;
@@ -242,7 +246,6 @@ function GamePro() {
         if (data) {
           inventory = data.inventory;
           maxKills = data.maxKills;
-          maxWave = data.maxWave;
           document.proGame.homeMenu();
         }
       });
@@ -295,34 +298,54 @@ function GamePro() {
 
         _canvasBufferContext2.clearRect(0, 0, _canvas2.width, _canvas2.height);
         _canvasBufferContext2.globalCompositeOperation="source-over";
-        _canvasBufferContext2.fillStyle = 'rgba(0,250,0,1.0)';
+        _canvasBufferContext2.fillStyle = 'rgba(0,0,0,1.0)';
         _canvasBufferContext2.globalCompositeOperation="destination-over";
         _canvasBufferContext2.fillRect(0,0,_canvas2.width,_canvas2.height);
         _canvasBufferContext2.globalCompositeOperation="source-over";
 
         for(pid in game_engine.active_players){
-          var yOffset = 0;
-          var plr;
-          if(game_engine.active_players[pid] == false){
-            yOffset = 0;
-          }else{
-            yOffset = 200;
-            plr = game_engine.getPlayer(game_engine.active_players[pid]);
-          }
-          var xPos = 20 + (190*(pid-1));
-          _canvasBufferContext2.drawImage(hud_img,
-                       190*uiFrame,yOffset,
-                       190,100,
-                       xPos,0,
-                       190,100);
+          if(hud_img && big_nums_img && lil_nums_img){
+            var yOffset = 0;
+            var plr = false;
+            var hudColor = 'rgba(50,50,50,1.0)';
+            if(game_engine.active_players[pid] == false){
+              yOffset = 0;
+            }else{
+              yOffset = 200;
+              hudColor = 'rgba(0,250,0,1.0)';
+              plr = game_engine.getPlayer(game_engine.active_players[pid]);
+            }
+            var xPos = 20 + (190*(pid-1));
+            _canvasBufferContext2.fillStyle = hudColor;
+            _canvasBufferContext2.fillRect(xPos,0,190,100);
+            _canvasBufferContext2.drawImage(hud_img,
+                         190*uiFrame,yOffset,
+                         190,100,
+                         xPos,0,
+                         190,100);
 
-        _canvasBufferContext2.globalCompositeOperation="source-over";
-          var nameXPos = 71 + (190 * (pid-1));
-          _canvasBufferContext2.font = '15px Impact';
-          _canvasBufferContext2.fillStyle = 'rgba(239,0,0,1.0)';
 
-          if(plr && plr.name){
-            _canvasBufferContext2.fillText(plr.name,nameXPos,26);
+            if(plr && plr.name){
+              _canvasBufferContext2.globalCompositeOperation="source-over";
+              var nameXPos = 71 + (190 * (pid-1));
+              _canvasBufferContext2.font = '15px Impact';
+              _canvasBufferContext2.fillStyle = 'rgba(239,0,0,1.0)';
+              _canvasBufferContext2.fillText(plr.name,nameXPos,26);
+              var bigXNum = (plr.kills % 10) * 50;
+              var bigNumXPos = 145 + (190 * (pid-1));
+              _canvasBufferContext2.drawImage(big_nums_img,
+                                              bigXNum,0,
+                                              50,85,
+                                              bigNumXPos,13,
+                                              50,85);
+              var lilXNum = Math.floor(plr.kills/10) * 25;
+              var lilNumXPos = 135 + (190 * (pid-1));
+              _canvasBufferContext2.drawImage(lil_nums_img,
+                                              lilXNum,0,
+                                              25,43,
+                                              lilNumXPos,52,
+                                              25,43);
+            }
           }
         }
 

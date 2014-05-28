@@ -72,7 +72,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       }
       var p = new playerModel.Player(pid, server, this.player_img, this.playerModels);
       p.name = name;
-      p.kills = kills;
+      //p.kills = kills;
       if(force){
         this.game_state.players[p.id] = p;
       }else{
@@ -280,8 +280,10 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       }
       for(p in this.game_state.players){
         var plr = this.game_state.players[p];
-        if(plr.position.x > (gameBounds.x + 60) || plr.position.x < -60 || plr.position.y > (gameBounds.y + 60)){
-          this.killPlayer(plr.id);
+        if(plr){
+          if(plr.position.x > (gameBounds.x + 60) || plr.position.x < -60 || plr.position.y > (gameBounds.y + 60)){
+            this.killPlayer(plr.id,true);
+          }
         }
       }
     }
@@ -305,15 +307,19 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
 
     this.apply_player_message = function(message) {
       //  changle player state based upon message
-        player = this.getPlayer(message.playerId);
-        if (player){
-          var objs = player.update_state(message);
-          if (objs) {
-          for (a in objs) {
-            var aid = this.nextAmmoId();
-            objs[a].id = aid;
-            this.game_state.hitBoxes[aid] = objs[a];
-          }
+        var p = this.getPlayer(message.playerId);
+        if (p){
+          if(message.kill){
+            this.killPlayer(p.id,false);
+          }else {
+            var objs = p.update_state(message);
+            if (objs) {
+              for (a in objs) {
+                var aid = this.nextAmmoId();
+                objs[a].id = aid;
+                this.game_state.hitBoxes[aid] = objs[a];
+              }
+            }
           }
         }
     }
@@ -338,7 +344,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       respawn_queue[p.id] = {count:40,kills:p.kills,name:p.name};
     }
 
-    this.killPlayer = function(pid){
+    this.killPlayer = function(pid,respawn){
       var p = this.getPlayer(pid);
       if(p){
         var killer_id = p.last_hit;
@@ -346,8 +352,12 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
         if(killer){
           killer.kills += 1;
         }
-        this.active_players[p.playerNum] = false;
-        this.queue_respawn(p);
+        if(p.playerNum){
+          this.active_players[p.playerNum] = false;
+        }
+        if(respawn){
+          this.queue_respawn(p);
+        }
         this.dropObject(pid,'players');
       }
     }

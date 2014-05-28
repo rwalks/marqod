@@ -15,7 +15,7 @@ exports.Player = function(pid,server,player_img,models) {
   this.id = pid;
   this.position = {};
   this.position.x = 390;
-  this.position.y = 90;
+  this.position.y = 85;
   this.velocity = {x:0,y:0};
   this.deltaV = {x:0,y:0};
   var serverTime = server ? 0 : 0;
@@ -35,7 +35,7 @@ exports.Player = function(pid,server,player_img,models) {
   this.attack2_count = 0;
   var moveFlags = {left:false,right:false,up:false,down:false}
   var img = player_img;
-  this.state = "stand";
+  this.state = "jump";
   var attack_states = {"attack1":true,"attack2":true,"air1":true,"air2":true,"land":true}
   var used_d_jump = false;
   var used_jump = false;
@@ -319,6 +319,7 @@ exports.Player = function(pid,server,player_img,models) {
    this.name = data.name;
    this.playerNum = data.playerNum;
    this.spawn_count = data.spawn_count;
+   this.kills = data.kills;
   }
 
   this.click_message = function(type,coords,which) {

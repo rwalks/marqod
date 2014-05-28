@@ -197,9 +197,9 @@ function dropPlayer(socket) {
     if(players[socket.id] && players[socket.id].playerId){
       var kills = engine.game_state.players[accountData.playerId].kills;
       accountData.maxKills = (kills > accountData.maxKills) ? kills : accountData.maxKills;
-
-      engine.dropObject(players[socket.id].playerId,'players');
-      delete players[socket.id].playerId;
+      var msg = {playerId:players[socket.id].playerId,kill:true};
+      engine.queue_message(msg);
+      io.sockets.emit("player_event", msg);
     }
     delete players[socket.id];
     db.collection('marqod', function(err, collection) {
