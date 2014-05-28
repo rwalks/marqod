@@ -13,6 +13,7 @@ var account = require('./Account.js');
 var players = {};
 var nonces = {};
 var firstConnect = true;
+var count = 0;
 
 var mongo = require('mongodb'),
       Server = mongo.Server,
@@ -68,7 +69,9 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('join', function(data){
     if (players[socket.id]) {
-      var pid = engine.addPlayer(false);
+      var name = players[socket.id].login;
+      var kills = players[socket.id].kills;
+      var pid = engine.addPlayer(false,kills,name);
       players[socket.id].playerId = pid;
       socket.emit('init',{'playerId' : pid})
       if (firstConnect){
@@ -192,10 +195,9 @@ function dropPlayer(socket) {
   try {
     var accountData = players[socket.id];
     if(players[socket.id] && players[socket.id].playerId){
-      var highWave = engine.game_state.players[accountData.playerId].highWave;
-      accountData.maxWave = (highWave > accountData.maxWave) ? highWave : accountData.maxWave;
       var kills = engine.game_state.players[accountData.playerId].kills;
       accountData.maxKills = (kills > accountData.maxKills) ? kills : accountData.maxKills;
+
       engine.dropObject(players[socket.id].playerId,'players');
       delete players[socket.id].playerId;
     }
@@ -210,7 +212,7 @@ function dropPlayer(socket) {
   } catch (e) {}
 }
 
-function getPlayerSocket(pid){
+function getPlayer(pid){
   for(p in players){
     if(players[p].playerId == pid){
       return p;
@@ -219,10 +221,17 @@ function getPlayerSocket(pid){
 }
 
 function tick() {
+  count = (count > 10) ? 10 : count + 1;
   engine.deleteSweep();
   engine.Update();
-
+  for(p in engine.newPlayers){
+    io.sockets.emit('spawn',engine.newPlayers.shift());
+  }
   io.sockets.emit('push',engine.game_state);
+  if(count % 10 == 0){
+    io.sockets.emit('queue',{names:engine.queue_names,
+                             active:engine.active_players});
+  }
 }
 
 function distance(obj1, obj2) {

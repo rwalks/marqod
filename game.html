@@ -19,11 +19,19 @@
   <script src="HitBox.js" type="text/javascript"></script> 
   <script src="Terrain.js" type="text/javascript"></script> 
   <script src="Tile.js" type="text/javascript"></script> 
+  <script src="Animation.js" type="text/javascript"></script> 
 
   <script>
     document.oncontextmenu = function() {return false;};
     $(function() {
       $('#canvas').mousedown(function(e) {
+        e.preventDefault();
+        
+        if(e.button === 2) {
+          // right click stuff
+        }
+      });
+      $('#canvas2').mousedown(function(e) {
         e.preventDefault();
         
         if(e.button === 2) {
@@ -40,6 +48,7 @@
 <body>
   <div id ="container">
     <canvas id="canvas" width="800" height="600"></canvas>
+    <canvas id="canvas2" width="800" height="100"></canvas>
 	<form id="loginForm" onsubmit="document.proGame.submitLogin(false); return false;">
 	  <input class="loginInput" placeholder="username" type="text" id="login_q"/>
 	  <br>

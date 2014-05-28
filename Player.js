@@ -14,8 +14,8 @@ exports.Player = function(pid,server,player_img,models) {
   var shitLord = models.shitLord;
   this.id = pid;
   this.position = {};
-  this.position.x = 100;
-  this.position.y = 100;
+  this.position.x = 390;
+  this.position.y = 90;
   this.velocity = {x:0,y:0};
   this.deltaV = {x:0,y:0};
   var serverTime = server ? 0 : 0;
@@ -40,6 +40,9 @@ exports.Player = function(pid,server,player_img,models) {
   var used_d_jump = false;
   var used_jump = false;
   var character = shitLord.ShitLord();
+  this.name;
+  this.playerNum;
+  this.spawn_count=0;
 
   this.receive_attack = function(player, target, hitBoxFriend, hitBoxFoe){
     if(character){
@@ -67,6 +70,7 @@ exports.Player = function(pid,server,player_img,models) {
   }
 
   this.update = function(lastUpdate,tiles){
+    if(this.spawn_count > 0){ this.spawn_count -= 1;}
     var interv = (attack_states[this.state]) ? attackAnimationInterval : animationInterval;
     if(animationCount == interv){
       this.animationFrame += 1;
@@ -87,34 +91,36 @@ exports.Player = function(pid,server,player_img,models) {
         }
       }
     }
-    var move_val = 20
-    if (moveFlags.left){
-      this.velocity.x -= move_val;
-    }
-    if (moveFlags.right){
-      this.velocity.x += move_val;
-    }
-    if (moveFlags.up){
-     // this.velocity.y -= val;
-    }
-    if (moveFlags.down){
-     // this.velocity.y += val;
-    }
+    if(this.spawn_count <= 0){
+      var move_val = 20
+      if (moveFlags.left){
+        this.velocity.x -= move_val;
+      }
+      if (moveFlags.right){
+        this.velocity.x += move_val;
+      }
+      if (moveFlags.up){
+       // this.velocity.y -= val;
+      }
+      if (moveFlags.down){
+       // this.velocity.y += val;
+      }
 
-    var deltaT = Date.now() - lastUpdate;
+      var deltaT = Date.now() - lastUpdate;
 
-    this.velocity.y += 30; //GRAVITAS
-    this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
-    this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
-    //air friction
-    this.deltaV.x = this.deltaV.x * 0.9;
-    this.deltaV.y = this.deltaV.y * 0.9;
-    this.check_terrain(tiles);
-    this.position.x += this.deltaV.x;
-    this.position.y += this.deltaV.y;
-    this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
-    this.velocity.y = (this.deltaV.y * 1000) / (deltaT + serverTime);
+      this.velocity.y += 30; //GRAVITAS
+      this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
+      this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
+      //air friction
+      this.deltaV.x = this.deltaV.x * 0.9;
+      this.deltaV.y = this.deltaV.y * 0.9;
+      this.check_terrain(tiles);
+      this.position.x += this.deltaV.x;
+      this.position.y += this.deltaV.y;
+      this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
+      this.velocity.y = (this.deltaV.y * 1000) / (deltaT + serverTime);
 
+    }
      if(this.state == "land"    ||
         this.state == "attack1" ||
         this.state == "attack2" ||
@@ -171,7 +177,7 @@ exports.Player = function(pid,server,player_img,models) {
       }
     }
     if(groundCol){
-      if(this.state == "jump"){
+      if(this.state == "jump" && this.deltaV.y > 0){
         this.state = "land";
         this.animationFrame = 0;
         animationCount = 0;
@@ -225,6 +231,7 @@ exports.Player = function(pid,server,player_img,models) {
   }
 
   this.move = function(direction,state) {
+    if(this.spawn_count <= 0){
     var val = (state) ? 100 : -100;
     switch(direction) {
       case "left":
@@ -242,7 +249,7 @@ exports.Player = function(pid,server,player_img,models) {
         moveFlags.up = state;
         break;
       case "jump":
-        if (state && this.jump_ready){
+        if (this.jump_ready){
           this.velocity.y -= 800;
           this.jump_ready = false;
           this.walking = false;
@@ -250,6 +257,7 @@ exports.Player = function(pid,server,player_img,models) {
           animationCount = 0;
         }
         break;
+    }
     }
   }
 
@@ -308,6 +316,9 @@ exports.Player = function(pid,server,player_img,models) {
 
    this.playerDirection = data.playerDirection;
    this.id = data.id;
+   this.name = data.name;
+   this.playerNum = data.playerNum;
+   this.spawn_count = data.spawn_count;
   }
 
   this.click_message = function(type,coords,which) {

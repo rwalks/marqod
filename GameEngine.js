@@ -3,7 +3,7 @@ var HEIGHT = 600;
 
 (function(exports) {
 
-exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM, terrainM, tileM){
+exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM, terrainM, tileM, animationM){
   //support browser and server
     var server = serv;
     var playerModel = server ? require('./Player.js') : playerM;
@@ -13,6 +13,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
     var hitBox = server ? require('./HitBox.js') : hitBoxM;
     var terrain = server ? require('./Terrain.js') : terrainM;
     var tile = server ? require('./Tile.js') : tileM;
+    var animation = server ? require('./Animation.js') : animationM;
     this.playerModels = {'weapon': weapon,'ammo':ammo,'hitBox':hitBox,'shitLord':shitLord}
 
     this.game_state = {};
@@ -24,14 +25,20 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
     var deleteQueue = {'players': [], 'ammos': [], 'hitBoxes':[]};
     var playerIndex = 1;
     var ammoIndex = 1;
+    var animation_index = 1;
     var gameBounds = {x: WIDTH, y: HEIGHT};
     var collisions;
     this.pushData;
     var objTypes = ['ammos','players','hitBoxes'];
     this.player_img = null;
     this.tile_img = null;
+    this.spawn_img = null;
     var respawn_queue = {};
     this.terrainReady=false;
+    this.player_queue = [];
+    this.active_players = {1:false,2:false,3:false,4:false};
+    this.newPlayers = [];
+    this.animations = {};
 
     this.levelHash = new terrain.Terrain().levelOne();
     this.tiles = {};
@@ -58,18 +65,46 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       this.terrainReady = true;
     }
 
-    this.addPlayer = function(pid) {
+    this.addPlayer = function(pid, kills, name, force) {
       if (!pid) {
         playerIndex += 1;
         pid = playerIndex;
       }
       var p = new playerModel.Player(pid, server, this.player_img, this.playerModels);
-      this.game_state.players[pid] = p;
+      p.name = name;
+      p.kills = kills;
+      if(force){
+        this.game_state.players[p.id] = p;
+      }else{
+        this.player_queue.push(p);
+      }
       return pid;
+    }
+
+    this.startPlayer = function(p,pNum) {
+      p.playerNum = pNum;
+      this.active_players[pNum] = p.id
+      p.spawn_count = 10;
+      this.game_state.players[p.id] = p;
+      this.newPlayers.push({id:p.id,pos:p.position});
+    }
+
+    this.spawnAnimation = function(id,pos,type,img){
+      var aid = (id) ? id : nextAnimId();
+      var spawn = new animation.Animation(aid,pos,type,img);
+      this.animations[aid] = spawn;
     }
 
     this.LoadContent = function () {
         lastUpdate = +new Date;
+    }
+
+    this.queue_names = function () {
+      var names = [];
+      for(i in this.player_queue){
+        names.push(this.player_queue[i].name);
+      }
+      names;
     }
 
     this.Run = function () {
@@ -88,7 +123,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
 
       for (ob in objTypes) {
         for (i in this.pushData[objTypes[ob]]) {
-          if (this.pushData[objTypes[ob]][i] == null) {
+          if (this.pushData[objTypes[ob]][i] == false) {
             this.dropObject(i,objTypes[ob]);
           }else {
             if (!this.game_state[objTypes[ob]][i]) {
@@ -114,11 +149,26 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
         this.applyClientBuffer();
       }else {
         for(pid in respawn_queue){
-          respawn_queue[pid] -= 1;
-          if(respawn_queue[pid] <= 0){
-            this.addPlayer(pid);
+          respawn_queue[pid].count -= 1;
+          if(respawn_queue[pid].count <= 0){
+            var pInfo = respawn_queue[pid];
+            this.addPlayer(pid,pInfo.kills,pInfo.name);
             delete respawn_queue[pid];
           }
+        }
+      }
+      for(pid in this.active_players){
+        if(this.active_players[pid] == false){
+          var p = this.player_queue.shift();
+          if(p){
+            this.startPlayer(p,pid);
+          }
+        }
+      }
+      for(aid in this.animations){
+        var done = this.animations[aid].update();
+        if (done){
+          delete this.animations[aid];
         }
       }
 
@@ -273,14 +323,19 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       return ammoIndex;
     }
 
+    nextAnimId = function() {
+      animation_index += 1;
+      return animation_index;
+    }
+
     this.addObject = function(id, type) {
-      if (type == 'players'){ this.addPlayer(id); }
+      if (type == 'players'){ this.addPlayer(id,null,null,true); }
       if (type == 'ammos'){ this.addAmmo(id); }
       if (type == 'hitBoxes'){ this.addHitbox(id); }
     }
 
-    this.queue_respawn = function(pid){
-      respawn_queue[pid] = 40;
+    this.queue_respawn = function(p){
+      respawn_queue[p.id] = {count:40,kills:p.kills,name:p.name};
     }
 
     this.killPlayer = function(pid){
@@ -291,14 +346,22 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
         if(killer){
           killer.kills += 1;
         }
+        this.active_players[p.playerNum] = false;
+        this.queue_respawn(p);
         this.dropObject(pid,'players');
-        this.queue_respawn(pid);
       }
     }
 
     this.dropObject = function(id, type) {
+      if(type == 'players'){
+        for(i in this.player_queue){
+          if(this.player_queue[i].id == id){
+            this.player_queue.splice(i,1);
+          }
+        }
+      }
       if (server) {
-        this.game_state[type][id] = null;
+        this.game_state[type][id] = false;
         deleteQueue[type].push(id);
       }else {
         delete this.game_state[type][id];
@@ -329,7 +392,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       var t = objTypes[i];
       for (j in deleteQueue[t]) {
         delete this.game_state[t][deleteQueue[t][j]];
-        delete deleteQueue[t][j];
+        deleteQueue[t].splice(j,1);
       }
     }
   }

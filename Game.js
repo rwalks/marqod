@@ -1,9 +1,9 @@
 function GamePro() {
 
-    var _canvas;
-    var _canvasContext;
-    var _canvasBuffer;
-    var _canvasBufferContext;
+    var _canvas; var _canvas2;
+    var _canvasContext; var _canvasContext2;
+    var _canvasBuffer; var _canvasBuffer2;
+    var _canvasBufferContext; var _canvasBufferContext2;
     var messageBuffer = [];
     var socket;
     var image1;
@@ -16,12 +16,17 @@ function GamePro() {
     var player_img;
     var tile_img;
     var bg_img;
+    var spawn_img;
+    var hud_img;
     var gameActive = false;
     var banner = new Banner();
     var uiMode = 'login';
     var salt;
     var loaded = false;
     var player_id;
+    var player_queue = [];
+    var uiFrame = 0;
+    var uiCount = 0;
 
     this.engine = function(){
       return game_engine();
@@ -30,6 +35,7 @@ function GamePro() {
     this.Initialize = function () {
         socket = io.connect();
         _canvas = document.getElementById('canvas');
+        _canvas2 = document.getElementById('canvas2');
         uiMode = 'login';
         if (_canvas && _canvas.getContext) {
 
@@ -38,7 +44,12 @@ function GamePro() {
             _canvasBuffer.width = _canvas.width;
             _canvasBuffer.height = _canvas.height;
             _canvasBufferContext = _canvasBuffer.getContext('2d');
-            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, shitLord, hitBox, terrain, tile);
+            _canvasContext2 = _canvas2.getContext('2d');
+            _canvasBuffer2 = document.createElement('canvas');
+            _canvasBuffer2.width = _canvas2.width;
+            _canvasBuffer2.height = _canvas2.height;
+            _canvasBufferContext2 = _canvasBuffer2.getContext('2d');
+            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, shitLord, hitBox, terrain, tile, animation);
             this.mainMenu = $("#mainMenu");
             this.mainMenu.hide();
             this.inventoryMenu = $("#inventory");
@@ -77,10 +88,17 @@ function GamePro() {
         uiMode = "game";
         bg_img = new Image;
         bg_img.src = "images/paperBG.png";
+        hud_img = new Image;
+        hud_img.src = "images/HUD_Sheet.png";
         tile_img = new Image;
         tile_img.src = "images/tile_set.png";
         tile_img.onload = function(){
           game_engine.tile_img = tile_img;
+        }
+        spawn_img = new Image;
+        spawn_img.src = "images/spawn.png";
+        spawn_img.onload = function(){
+          game_engine.spawn_img = spawn_img;
         }
         player_img = new Image;
         player_img.onload = function(){
@@ -103,6 +121,7 @@ function GamePro() {
     this.tick = function(){
       game_engine.Update()
       this.Draw();
+      this.drawUI();
     }
 
     this.menuClick = function(action){
@@ -199,6 +218,19 @@ function GamePro() {
         }
       });
 
+      socket.on('queue', function (msg) {
+        if (msg) {
+          player_queue = msg.names;
+          game_engine.active_players = msg.active;
+        }
+      });
+
+      socket.on('spawn', function (msg) {
+        if (msg) {
+          game_engine.spawnAnimation(false,msg.pos,'spawn',spawn_img);
+        }
+      });
+
       socket.on('handshake', function (data) {
         if (data) {
           salt = data.n;
@@ -254,6 +286,51 @@ function GamePro() {
       return {"x": x, "y": y};
     };
 
+    this.drawUI = function() {
+        uiCount += 1;
+        if(uiCount > 20){
+          uiFrame = (uiFrame > 3) ? 0 : uiFrame + 1;
+          uiCount = 0;
+        }
+
+        _canvasBufferContext2.clearRect(0, 0, _canvas2.width, _canvas2.height);
+        _canvasBufferContext2.globalCompositeOperation="source-over";
+        _canvasBufferContext2.fillStyle = 'rgba(0,250,0,1.0)';
+        _canvasBufferContext2.globalCompositeOperation="destination-over";
+        _canvasBufferContext2.fillRect(0,0,_canvas2.width,_canvas2.height);
+        _canvasBufferContext2.globalCompositeOperation="source-over";
+
+        for(pid in game_engine.active_players){
+          var yOffset = 0;
+          var plr;
+          if(game_engine.active_players[pid] == false){
+            yOffset = 0;
+          }else{
+            yOffset = 200;
+            plr = game_engine.getPlayer(game_engine.active_players[pid]);
+          }
+          var xPos = 20 + (190*(pid-1));
+          _canvasBufferContext2.drawImage(hud_img,
+                       190*uiFrame,yOffset,
+                       190,100,
+                       xPos,0,
+                       190,100);
+
+        _canvasBufferContext2.globalCompositeOperation="source-over";
+          var nameXPos = 71 + (190 * (pid-1));
+          _canvasBufferContext2.font = '15px Impact';
+          _canvasBufferContext2.fillStyle = 'rgba(239,0,0,1.0)';
+
+          if(plr && plr.name){
+            _canvasBufferContext2.fillText(plr.name,nameXPos,26);
+          }
+        }
+
+        _canvasContext2.clearRect(0, 0, _canvas2.width, _canvas2.height);
+        //_canvasBufferContext.globalCompositeOperation="source-atop";
+        _canvasContext2.drawImage(_canvasBuffer2, 0, 0);
+    }
+
     this.Draw = function () {
         //clear canvas
         _canvasBufferContext.clearRect(0, 0, _canvas.width, _canvas.height);
@@ -292,18 +369,11 @@ function GamePro() {
               _canvasBufferContext.fill();
           }
 */
-          //draw healthbar
-     /*     _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
-          _canvasBufferContext.fillRect(plr.position.x - 13,
-                                        plr.position.y - 20,
-                                        30,
-                                        3);
-          _canvasBufferContext.fillStyle = 'rgba(200,10,10,0.6)';
-          _canvasBufferContext.fillRect(plr.position.x - 13,
-                                        plr.position.y - 20,
-                                        30 * (plr.health / plr.maxHealth),
-                                        3);
-                                        */
+          _canvasBufferContext.font = '20px Georgia';
+          _canvasBufferContext.fillStyle = 'rgba(250,0,200,0.7)';
+          if(plr.name){
+            _canvasBufferContext.fillText(plr.name,plr.position.x-(plr.name.length/2)-10,plr.position.y-55);
+          }
         }
 /*
         if (game_engine.game_state.hitBoxes != null){
@@ -334,6 +404,9 @@ function GamePro() {
               _canvasBufferContext.fillText("*",am.position.x,am.position.y);
             }
           }
+        }
+        for(a in game_engine.animations){
+          game_engine.animations[a].draw(_canvasBufferContext);
         }
         if(game_engine.terrainReady){
         for(x in game_engine.tiles){
