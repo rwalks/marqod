@@ -269,7 +269,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
             var plr = this.game_state.players[p];
             if(hbMain.pid != plr.id){
               var plr2 = this.getPlayer(hbMain.pid);
-              if(plr2){
+              if(plr2 && plr){
                 if(boxCollide(hbMain.poly(plr2),plr.poly())){
                   plr2.receive_attack(plr2,plr,hbMain);
                 }

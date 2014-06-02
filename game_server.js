@@ -188,7 +188,8 @@ function createAccount(login,password,socket){
 }
 
 function validatePlayer(socket, id) {
-  return (id == players[socket.id].playerId)
+  var plr = players[socket.id];
+  return (plr) ? (id == plr.playerId) : false;
 }
 
 function dropPlayer(socket) {

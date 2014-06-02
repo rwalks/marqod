@@ -43,6 +43,7 @@ exports.Player = function(pid,server,player_img,models) {
   this.name;
   this.playerNum;
   this.spawn_count=0;
+  character = shitLord;
 
   this.receive_attack = function(player, target, hitBoxFriend, hitBoxFoe){
     if(character){
@@ -141,37 +142,68 @@ exports.Player = function(pid,server,player_img,models) {
     var modX = this.position.x + this.deltaV.x;
     var modY = this.position.y + this.deltaV.y;
     var groundCol = false;
-    for(x in tiles){
-      if (Math.abs(modX - x) < 27){
-        for(y in tiles[x]){
-          if (Math.abs(modY - y) < 45){
-            var til = tiles[x][y];
-            if(pointInTile([modX + 27, modY],til.position)){
-              this.deltaV.x = 0;
-            }else if(pointInTile([modX - 27, modY],til.position)){
-              this.deltaV.x = 0;
-            }else if(pointInTile([modX, modY+45],til.position)){
-              //this.deltaV.y -= ((modY+45) - til.position.y);
-              this.deltaV.y = 0;
-              groundCol = true;
-            }else if(pointInTile([modX, modY-45],til.position)){
-              this.deltaV.y = 0;
-            }else if(pointInTile([modX+22,modY+35],til.position)){
-              if(this.deltaV.y > 0){this.deltaV.y = 0;}
-              if(this.deltaV.x > 0){this.deltaV.x = 0;}
-            }else if(pointInTile([modX+22,modY-35],til.position)){
-              if(this.deltaV.y < 0){this.deltaV.y = 0;}
-              if(this.deltaV.x > 0){this.deltaV.x = 0;}
-            }else if(pointInTile([modX-22,modY-35],til.position)){
-              if(this.deltaV.y < 0){this.deltaV.y = 0;}
-              if(this.deltaV.x < 0){this.deltaV.x = 0;}
-            }else if(pointInTile([modX-22,modY+35],til.position)){
-              if(this.deltaV.y > 0){this.deltaV.y = 0;}
-              if(this.deltaV.x < 0){this.deltaV.x = 0;}
-            }else{
-              this.walking = false;
+    var pol = this.poly();
+    var maxX = pol[0][0];
+    var minX = pol[0][0];
+    var maxY = pol[0][1];
+    var minY = pol[0][1];
+    for(p in pol){
+      if(pol[p][0] > maxX){maxX = pol[p][0];}
+      if(pol[p][0] < minX){minX = pol[p][0];}
+      if(pol[p][1] > maxY){maxY = pol[p][1];}
+      if(pol[p][1] < minY){minY = pol[p][1];}
+    }
+    var minTile;
+    var maxTile;
+    var inc;
+    if(this.deltaV.x != 0){
+      var upY = maxY - (maxY % 20);
+      var lowY = minY - (minY % 20);
+      if(this.deltaV.x > 0){
+        //right
+        if(modX < maxX){modX = maxX;};
+        minTile = maxX - (maxX % 20);
+        maxTile = modX - (modX % 20);
+        inc = 20;
+      }else if(this.deltaV.x < 0){
+        if(modX < minX){modX = minX;};
+        minTile = minX - (minX % 20);
+        maxTile = modX - (modX % 20);
+        inc = -20;
+      }
+      for(var x = minTile; x != maxTile; x += inc){
+        for(var y = lowY; y <= upY; y += 20){
+          var til = tiles[x][y];
+          if(til){
+            this.deltaV.x = 0;
+          }
+        }
+      }
+    }
+    //YYY
+    if(this.deltaV.y != 0){
+      var upX = maxX - (maxX % 20);
+      var lowX = minX - (minX % 20);
+      if(this.deltaV.y > 0){
+        //down
+        if(modY < maxY){modY = maxY;};
+        minTile = maxY - (maxY % 20);
+        maxTile = modY - (modY % 20);
+        inc = 20;
+      }else if(this.deltaV.y < 0){
+        if(modY > minY){modY = maxY;};
+        minTile = minY - (minY % 20);
+        maxTile = modY - (modY % 20);
+        inc = -20;
+      }
+      for(var y = minTile; y != maxTile; y += inc){
+        for(var x = lowX; x <= upX; x += 20){
+          var til = tiles[x][y];
+          if(til){
+            if(this.deltaV.y > 0){
+              this.groundCol = true;
             }
-
+            this.deltaV.y = 0;
           }
         }
       }
