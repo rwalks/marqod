@@ -153,57 +153,62 @@ exports.Player = function(pid,server,player_img,models) {
       if(pol[p][1] > maxY){maxY = pol[p][1];}
       if(pol[p][1] < minY){minY = pol[p][1];}
     }
-    var minTile;
-    var maxTile;
-    var inc;
-    if(this.deltaV.x != 0){
-      var upY = maxY - (maxY % 20);
-      var lowY = minY - (minY % 20);
-      if(this.deltaV.x > 0){
-        //right
-        if(modX < maxX){modX = maxX;};
-        minTile = maxX - (maxX % 20);
-        maxTile = modX - (modX % 20);
-        inc = 20;
-      }else if(this.deltaV.x < 0){
-        if(modX < minX){modX = minX;};
-        minTile = minX - (minX % 20);
-        maxTile = modX - (modX % 20);
-        inc = -20;
-      }
-      for(var x = minTile; x != maxTile; x += inc){
-        for(var y = lowY; y <= upY; y += 20){
-          var til = tiles[x][y];
-          if(til){
-            this.deltaV.x = 0;
-          }
-        }
-      }
-    }
-    //YYY
-    if(this.deltaV.y != 0){
-      var upX = maxX - (maxX % 20);
-      var lowX = minX - (minX % 20);
-      if(this.deltaV.y > 0){
-        //down
-        if(modY < maxY){modY = maxY;};
-        minTile = maxY - (maxY % 20);
-        maxTile = modY - (modY % 20);
-        inc = 20;
-      }else if(this.deltaV.y < 0){
-        if(modY > minY){modY = maxY;};
-        minTile = minY - (minY % 20);
-        maxTile = modY - (modY % 20);
-        inc = -20;
-      }
-      for(var y = minTile; y != maxTile; y += inc){
-        for(var x = lowX; x <= upX; x += 20){
-          var til = tiles[x][y];
-          if(til){
-            if(this.deltaV.y > 0){
-              this.groundCol = true;
+    //find line of motion
+    var slope = (this.position.x - modX) / (this.position.y = modY);
+    //find range of motion
+    var minTileX = (this.deltaV.x >= 0) ? minX : minX + this.deltaV.x;
+    minTileX = minTileX - (minTileX % 20);
+    var minTileY = (this.deltaV.y >= 0) ? minY : minY + this.deltaV.y;
+    minTileY = minTileY - (minTileY % 20);
+    var maxTileX = (this.deltaV.x >= 0) ? maxX + this.deltaV.x : maxX;
+    maxTileX = maxTileX - (maxTileX % 20);
+    var maxTileY = (this.deltaV.y >= 0) ? maxY + this.deltaV.y : maxY;
+    maxTileY = maxTileY - (maxTileY % 20);
+    //scan tiles in range of motion
+    for(var y = minTileY; y <= maxTileY; y += 20){
+      for(var x = minTileX; x <= maxTileX; x += 20){
+        var til = tiles[x][y];
+        if(til){
+          if(this.deltaV.x == 0 || this.deltaV.y == 0){
+            if(this.deltaV.y > (y+10 - this.position.y)){
+              this.deltaV.y = (y+10 - this.position.y);
             }
-            this.deltaV.y = 0;
+          }else{
+            var lx = (((y+10) - modY)/slope) + modX;
+            var ly = (((x+10) - modX)*slope) + modY;
+      console.log(lx + ",," + ly);
+            if(this.deltaV.x > 0){
+              if(lx >= 0 && lx < 27){
+                console.log("right");
+                if(this.deltaV.x > (x - this.position.x)){
+                  this.deltaV.x = x - this.postion.x;
+                }
+              }
+            }else if(this.deltaV.x < 0){
+              if(lx <= 0 && lx > -27){
+                console.log("left");
+                if(this.deltaV.x < (x - this.position.x)){
+                  this.deltaV.x = x - this.postion.x;
+                }
+              }
+            }
+            if(this.deltaV.y > 0){
+              if(ly >= 0 && ly < 45){
+                console.log("down");
+                groundCol = true;
+                if(this.deltaV.y > (y - this.position.y)){
+                  this.deltaV.y = y - this.postion.y;
+                }
+              }
+
+            }else if(this.deltaV.y < 0){
+              if(ly <= 0 && ly > -45){
+                console.log("up");
+                if(this.deltaV.y < (y - this.position.y)){
+                  this.deltaV.y = y - this.postion.y;
+                }
+              }
+            }
           }
         }
       }
