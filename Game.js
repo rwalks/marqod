@@ -378,7 +378,6 @@ function GamePro() {
           var plr = game_engine.game_state.players[p];
           //draw player
           plr.draw(_canvasBufferContext)
-/*
               var points = plr.poly();
           if(points){
               var start = points.pop();
@@ -391,7 +390,6 @@ function GamePro() {
               _canvasBufferContext.closePath();
               _canvasBufferContext.fill();
           }
-*/
           _canvasBufferContext.font = '20px Georgia';
           _canvasBufferContext.fillStyle = 'rgba(250,0,200,0.7)';
           if(plr.name){

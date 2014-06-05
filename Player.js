@@ -154,7 +154,9 @@ exports.Player = function(pid,server,player_img,models) {
       if(pol[p][1] < minY){minY = pol[p][1];}
     }
     //find line of motion
-    var slope = (this.position.x - modX) / (this.position.y = modY);
+    var slope = (this.position.x - modX) / (this.position.y - modY);
+    var slopeP =  -1 / slope;
+    var yInt = (-slope * this.position.x) + this.position.y;
     //find range of motion
     var minTileX = (this.deltaV.x >= 0) ? minX : minX + this.deltaV.x;
     minTileX = minTileX - (minTileX % 20);
@@ -169,14 +171,17 @@ exports.Player = function(pid,server,player_img,models) {
       for(var x = minTileX; x <= maxTileX; x += 20){
         var til = tiles[x][y];
         if(til){
-          if(this.deltaV.x == 0 || this.deltaV.y == 0){
-            if(this.deltaV.y > (y+10 - this.position.y)){
-              this.deltaV.y = (y+10 - this.position.y);
-            }
+          var d;
+          if(slope != 0){
+            var yIntT = (-slopeP * (til.position.x+10)) + (til.position.y+10);
+            var interceptX = (yIntT - yInt) / (slope - slopeP);
+            var interceptY = (slope * interceptX) + yInt;
+            //console.log(slope + "," + slopeP + "," + yInt + "," + yIntT + "," + interceptX + "," + interceptY);
+            d = distance([interceptX,interceptY],[til.position.x,til.position.y]);
           }else{
-            var lx = (((y+10) - modY)/slope) + modX;
-            var ly = (((x+10) - modX)*slope) + modY;
-      console.log(lx + ",," + ly);
+            d = til.position.x - this.position.x;
+          }
+      /*
             if(this.deltaV.x > 0){
               if(lx >= 0 && lx < 27){
                 console.log("right");
@@ -192,24 +197,24 @@ exports.Player = function(pid,server,player_img,models) {
                 }
               }
             }
+            */
             if(this.deltaV.y > 0){
-              if(ly >= 0 && ly < 45){
+              if(d <= 0 && d > -40){
                 console.log("down");
                 groundCol = true;
-                if(this.deltaV.y > (y - this.position.y)){
-                  this.deltaV.y = y - this.postion.y;
+                if(this.deltaV.y > (til.position.y - this.position.y)){
+                  this.deltaV.y = til.position.y - this.postion.y;
                 }
               }
 
             }else if(this.deltaV.y < 0){
-              if(ly <= 0 && ly > -45){
+              if(d >= 0 && d < 40){
                 console.log("up");
-                if(this.deltaV.y < (y - this.position.y)){
-                  this.deltaV.y = y - this.postion.y;
+                if(this.deltaV.y < (til.position.y - this.position.y)){
+                  this.deltaV.y = til.position.y - this.postion.y;
                 }
               }
             }
-          }
         }
       }
     }
@@ -222,6 +227,12 @@ exports.Player = function(pid,server,player_img,models) {
       this.jump_ready = true;
       this.walking = true;
       used_d_jump = false;
+    }
+  }
+
+  var distance = function(p1, p2) {
+    if (p1 && p2){
+      return Math.sqrt(Math.pow((p2[0] - p1[0]),2)+Math.pow((p2[1]-p1[1]),2));
     }
   }
 
