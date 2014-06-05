@@ -14,6 +14,7 @@ var players = {};
 var nonces = {};
 var firstConnect = true;
 var count = 0;
+var chatBuffer = [];
 
 var mongo = require('mongodb'),
       Server = mongo.Server,
@@ -70,12 +71,30 @@ io.sockets.on('connection', function (socket) {
   socket.on('join', function(data){
     if (players[socket.id]) {
       var name = players[socket.id].login;
-      var kills = players[socket.id].kills;
-      var pid = engine.addPlayer(false,kills,name);
+      var tKills = players[socket.id].maxKills;
+      var tDeaths = players[socket.id].maxDeaths;
+      var pid = engine.addPlayer(false,tKills,tDeaths,name);
       players[socket.id].playerId = pid;
-      socket.emit('init',{'playerId' : pid})
+      chatBuffer.unshift("::::DEHUMANIZE YOURSELF "+ name +" AND FACE TO BLOODSHED::::");
+      socket.emit('init',{'playerId' : pid});
+      socket.emit('chat_buffer',{'buffer':chatBuffer});
       if (firstConnect){
         firstConnect = false;
+      }
+    }
+  });
+
+  socket.on('chat_message', function(data) {
+    if(data && data.text){
+      var plr = players[socket.id];
+      if(plr && plr.login){
+        var msg = { message: plr.login+": "+ data.text };
+        chatBuffer.unshift(msg.message);
+        if(chatBuffer.length > 30){
+          chatBuffer.pop();
+        }
+        socket.emit('chat_message', msg);
+        socket.broadcast.emit('chat_message', msg);
       }
     }
   });
@@ -196,8 +215,10 @@ function dropPlayer(socket) {
   try {
     var accountData = players[socket.id];
     if(players[socket.id] && players[socket.id].playerId){
-      var kills = engine.game_state.players[accountData.playerId].kills;
+      var kills = engine.game_state.players[accountData.playerId].totalKills;
+      var deaths = engine.game_state.players[accountData.playerId].totalDeaths;
       accountData.maxKills = (kills > accountData.maxKills) ? kills : accountData.maxKills;
+      accountData.maxDeaths = (deaths > accountData.maxDeaths) ? deaths : accountData.maxDeaths;
       var msg = {playerId:players[socket.id].playerId,kill:true};
       engine.queue_message(msg);
       io.sockets.emit("player_event", msg);
@@ -230,7 +251,7 @@ function tick() {
   }
   io.sockets.emit('push',engine.game_state);
   if(count % 10 == 0){
-    io.sockets.emit('queue',{names:engine.queue_names,
+    io.sockets.emit('queue',{names:engine.queue_names(),
                              active:engine.active_players});
   }
 }

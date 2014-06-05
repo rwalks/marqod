@@ -27,6 +27,8 @@ exports.Player = function(pid,server,player_img,models) {
   var animationInterval = 10;
   var attackAnimationInterval = 5;
   this.kills = 0;
+  this.totalKills;
+  this.totalDeaths;
   this.playerDirection = 0;
   this.jump_ready = false;
   this.walking = false;
@@ -44,6 +46,8 @@ exports.Player = function(pid,server,player_img,models) {
   this.playerNum;
   this.spawn_count=0;
   character = shitLord;
+  var groundCol = 0;
+  this.charName = "shitLord";
 
   this.receive_attack = function(player, target, hitBoxFriend, hitBoxFoe){
     if(character){
@@ -116,6 +120,7 @@ exports.Player = function(pid,server,player_img,models) {
       this.deltaV.x = this.deltaV.x * 0.9;
       this.deltaV.y = this.deltaV.y * 0.9;
       this.check_terrain(tiles);
+
       this.position.x += this.deltaV.x;
       this.position.y += this.deltaV.y;
       this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
@@ -141,7 +146,6 @@ exports.Player = function(pid,server,player_img,models) {
   this.check_terrain = function(tiles){
     var modX = this.position.x + this.deltaV.x;
     var modY = this.position.y + this.deltaV.y;
-    var groundCol = false;
     var pol = this.poly();
     var maxX = pol[0][0];
     var minX = pol[0][0];
@@ -153,10 +157,6 @@ exports.Player = function(pid,server,player_img,models) {
       if(pol[p][1] > maxY){maxY = pol[p][1];}
       if(pol[p][1] < minY){minY = pol[p][1];}
     }
-    //find line of motion
-    var slope = (this.position.x - modX) / (this.position.y - modY);
-    var slopeP =  -1 / slope;
-    var yInt = (-slope * this.position.x) + this.position.y;
     //find range of motion
     var minTileX = (this.deltaV.x >= 0) ? minX : minX + this.deltaV.x;
     minTileX = minTileX - (minTileX % 20);
@@ -166,68 +166,75 @@ exports.Player = function(pid,server,player_img,models) {
     maxTileX = maxTileX - (maxTileX % 20);
     var maxTileY = (this.deltaV.y >= 0) ? maxY + this.deltaV.y : maxY;
     maxTileY = maxTileY - (maxTileY % 20);
+    var futurePoly = [[minTileX,minTileY],[minTileX,maxTileY],[maxTileX,maxTileY],[maxTileX,minTileY]];
+
+    //
     //scan tiles in range of motion
     for(var y = minTileY; y <= maxTileY; y += 20){
       for(var x = minTileX; x <= maxTileX; x += 20){
-        var til = tiles[x][y];
+        var til = tiles[x] ? tiles[x][y] : false;
         if(til){
-          var d;
-          if(slope != 0){
-            var yIntT = (-slopeP * (til.position.x+10)) + (til.position.y+10);
-            var interceptX = (yIntT - yInt) / (slope - slopeP);
-            var interceptY = (slope * interceptX) + yInt;
-            //console.log(slope + "," + slopeP + "," + yInt + "," + yIntT + "," + interceptX + "," + interceptY);
-            d = distance([interceptX,interceptY],[til.position.x,til.position.y]);
-          }else{
-            d = til.position.x - this.position.x;
-          }
-      /*
-            if(this.deltaV.x > 0){
-              if(lx >= 0 && lx < 27){
-                console.log("right");
-                if(this.deltaV.x > (x - this.position.x)){
-                  this.deltaV.x = x - this.postion.x;
-                }
-              }
-            }else if(this.deltaV.x < 0){
-              if(lx <= 0 && lx > -27){
-                console.log("left");
-                if(this.deltaV.x < (x - this.position.x)){
-                  this.deltaV.x = x - this.postion.x;
-                }
-              }
-            }
-            */
-            if(this.deltaV.y > 0){
-              if(d <= 0 && d > -40){
-                console.log("down");
-                groundCol = true;
-                if(this.deltaV.y > (til.position.y - this.position.y)){
-                  this.deltaV.y = til.position.y - this.postion.y;
-                }
-              }
 
-            }else if(this.deltaV.y < 0){
-              if(d >= 0 && d < 40){
-                console.log("up");
-                if(this.deltaV.y < (til.position.y - this.position.y)){
-                  this.deltaV.y = til.position.y - this.postion.y;
-                }
+          if (boxCollide(futurePoly,til.poly())){
+            if(pointInTile([modX+27, modY],til.position)){
+              //right
+              this.deltaV.x = 0;
+            }else if(pointInTile([modX-12, modY],til.position)){
+              //left
+              this.deltaV.x = 0;
+            }else if(pointInTile([modX, modY+45],til.position)){
+              //down
+              this.deltaV.y = 0;
+              groundCol = 5;
+            }else if(pointInTile([modX, modY-45],til.position)){
+              //up
+              if(this.deltaV.y < 0){this.deltaV.y = 0;}
+            }else if(pointInTile([modX+15,modY+35],til.position)){
+              //bottom R
+              if(this.deltaV.y > 0 && this.deltaV.x < 0){
+                this.deltaV.y = 0;
+                groundCol = 5;
               }
+              if(this.deltaV.x > 0){this.deltaV.x = 0;}
+            }else if(pointInTile([modX+22,modY-40],til.position)){
+              //top R
+              if(this.deltaV.y < 0){this.deltaV.y = 0;}
+              if(this.deltaV.x > 0){this.deltaV.x = 0;}
+            }else if(pointInTile([modX-12,modY-35],til.position)){
+              //top L
+              if(this.deltaV.y < 0){this.deltaV.y = 0;}
+              if(this.deltaV.x < 0){this.deltaV.x = 0;}
+            }else if(pointInTile([modX-12,modY+35],til.position)){
+              //bottom L
+              if(this.deltaV.y > 0 && this.deltaV.x > 0){
+                this.deltaV.y = 0;
+                groundCol = 5;
+              }
+              if(this.deltaV.x < 0){this.deltaV.x = 0;}
             }
+            if(Math.abs(modX - til.position.x+10) < 10 && Math.abs(modY - til.position.y+10) < 10){
+              this.deltaV.x = -0.5 * this.deltaV.x;
+              this.deltaV.y = -0.5 * this.deltaV.y;
+            }
+          }
         }
       }
     }
-    if(groundCol){
-      if(this.state == "jump" && this.deltaV.y > 0){
-        this.state = "land";
-        this.animationFrame = 0;
-        animationCount = 0;
+    if(groundCol > 0){
+      if(groundCol >= 5){
+        this.jump_ready = true;
+        used_d_jump = false;
+        if(this.state == "jump"){
+          this.state = "land";
+          this.animationFrame = 0;
+          animationCount = 0;
+        }
       }
-      this.jump_ready = true;
       this.walking = true;
-      used_d_jump = false;
+    }else{
+      this.walking = false;
     }
+    groundCol = (groundCol > 0) ? groundCol - 1 : 0;
   }
 
   var distance = function(p1, p2) {
@@ -237,7 +244,7 @@ exports.Player = function(pid,server,player_img,models) {
   }
 
   var pointInTile = function(point,tileP){
-    var ret = !(point[0] < tileP.x || point[0] > (tileP.x + 20) || point[1] < tileP.y || point[1] > (tileP + 20));
+    var ret = !(point[0] < tileP.x || point[0] > (tileP.x + 20) || point[1] < tileP.y || point[1] > (tileP.y + 20));
     return ret;
   }
 
@@ -309,13 +316,29 @@ exports.Player = function(pid,server,player_img,models) {
     }
   }
 
-  this.playerColor = {
-    0:'rgba(255,0,0,1.0)',
-    1:'rgba(0,255,0,1.0)',
-    2:'rgba(0,100,255,1.0)',
-    3:'rgba(0,255,255,1.0)',
-    4:'rgba(255,255,0,1.0)',
-    5:'rgba(255,100,200,1.0)'
+  this.playerColor = function(){
+    var c;
+    switch(parseInt(this.playerNum)){
+      case 0:
+        c = 'rgba(255,0,0,1.0)';
+        break;
+      case 1:
+        c = 'rgba(0,255,0,1.0)';
+        break;
+      case 2:
+        c ='rgba(0,100,255,1.0)';
+        break;
+      case 3:
+        c = 'rgba(0,255,255,1.0)';
+        break;
+      case 4:
+        c = 'rgba(255,255,0,1.0)';
+        break;
+      default:
+        c = 'rgba(255,100,200,1.0)';
+        break;
+    }
+    return c;
   }
 
   this.draw = function(context) {
@@ -352,6 +375,11 @@ exports.Player = function(pid,server,player_img,models) {
                       (this.position.x-27),(this.position.y-45),
 		      54,90
 	             );
+    context.font = '20px Georgia';
+    context.fillStyle = this.playerColor();
+    if(this.name){
+      context.fillText(this.name,this.position.x-(this.name.length/2)-10,this.position.y-55);
+    }
   }
 
   this.serverPush = function (data) {
@@ -368,6 +396,8 @@ exports.Player = function(pid,server,player_img,models) {
    this.playerNum = data.playerNum;
    this.spawn_count = data.spawn_count;
    this.kills = data.kills;
+   this.totalKills = data.totalKills;
+   this.totalDeaths = data.totalDeaths;
   }
 
   this.click_message = function(type,coords,which) {

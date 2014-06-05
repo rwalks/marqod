@@ -8,12 +8,14 @@ exports.Account = function(params) {
   this.inventory = params.inventory;
   this.maxWave = params.maxWave ? params.maxWave : 0;
   this.maxKills = params.maxKills ? params.maxKills : 0;
+  this.maxDeaths = params.maxDeaths ? params.maxDeaths : 0;
   this.sendData = function(){
     return {
       login:this.login,
       inventory:this.inventory,
       maxWave:this.maxWave,
-      maxKills:this.maxKills
+      maxKills:this.maxKills,
+      maxDeaths:this.maxDeaths
     }
   }
 

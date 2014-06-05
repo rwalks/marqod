@@ -65,14 +65,15 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
       this.terrainReady = true;
     }
 
-    this.addPlayer = function(pid, kills, name, force) {
+    this.addPlayer = function(pid, kills, deaths, name, force) {
       if (!pid) {
         playerIndex += 1;
         pid = playerIndex;
       }
       var p = new playerModel.Player(pid, server, this.player_img, this.playerModels);
-      p.name = name;
-      //p.kills = kills;
+      p.name = name ? name.slice(0,9) : "NoobLord";
+      p.totalKills = kills;
+      p.totalDeaths = deaths;
       if(force){
         this.game_state.players[p.id] = p;
       }else{
@@ -102,9 +103,14 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
     this.queue_names = function () {
       var names = [];
       for(i in this.player_queue){
-        names.push(this.player_queue[i].name);
+        var p = this.player_queue[i];
+        names.push({name:p.name,kills:p.totalKills,deaths:p.totalDeaths,character:p.charName});
       }
-      names;
+      for(pid in respawn_queue){
+        var p = respawn_queue[pid];
+        names.push({name:p.name,kills:p.kills,deaths:p.deaths,character:''});
+      }
+      return names;
     }
 
     this.Run = function () {
@@ -152,7 +158,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
           respawn_queue[pid].count -= 1;
           if(respawn_queue[pid].count <= 0){
             var pInfo = respawn_queue[pid];
-            this.addPlayer(pid,pInfo.kills,pInfo.name);
+            this.addPlayer(pid,pInfo.kills,pInfo.deaths,pInfo.name);
             delete respawn_queue[pid];
           }
         }
@@ -335,22 +341,24 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
     }
 
     this.addObject = function(id, type) {
-      if (type == 'players'){ this.addPlayer(id,null,null,true); }
+      if (type == 'players'){ this.addPlayer(id,null,null,null,true); }
       if (type == 'ammos'){ this.addAmmo(id); }
       if (type == 'hitBoxes'){ this.addHitbox(id); }
     }
 
     this.queue_respawn = function(p){
-      respawn_queue[p.id] = {count:40,kills:p.kills,name:p.name};
+      respawn_queue[p.id] = {count:40,kills:p.totalKills,deaths:p.totalDeaths,name:p.name};
     }
 
     this.killPlayer = function(pid,respawn){
       var p = this.getPlayer(pid);
       if(p){
+        p.totalDeaths += 1;
         var killer_id = p.last_hit;
         var killer = this.getPlayer(killer_id);
         if(killer){
           killer.kills += 1;
+          killer.totalKills += 1;
         }
         if(p.playerNum){
           this.active_players[p.playerNum] = false;

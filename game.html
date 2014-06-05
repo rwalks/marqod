@@ -47,51 +47,63 @@
 </head>
 <body>
   <div id ="container">
-    <canvas id="canvas" width="800" height="600"></canvas>
-    <canvas id="canvas2" width="800" height="100"></canvas>
-	<form id="loginForm" onsubmit="document.proGame.submitLogin(false); return false;">
-	  <input class="loginInput" placeholder="username" type="text" id="login_q"/>
-	  <br>
-	  <input class="loginInput" placeholder="password" type="password" id="password_q"/>
-	  <br>
-	  <div id="loginButtonContainer">
-	    <input class="loginButton" type="submit" value="[ continue ]" />
-	    <a class="loginButton" onclick='document.proGame.submitLogin(true);'>[ new ]</a>
-	  </div>
-	</form>
-  <center>
- <div id="inventory">
-  <table id = "inventoryTable">
-    <tr>
-      <td> <div class="invBox" id = "invLabel1">Primary</div></td>
-      <td><div class="invBox" id = "invLabel2">Acc. 1</div></td>
-      <td><div class="invBox" id = "invLabel3">Acc. 2</div></td>
-      <td><div class="invBox" id = "invLabel4">Acc. 3</div></td>
-    </tr>
-    <tr>
-      <td><select id="invSelect1">
-          <option selected value="">~~~</option>
-      </select></td>
-      <td><select id="invSelect2">
-          <option selected value="">~~~</option>
-      </select></td>
-      <td><select id="invSelect3">
-          <option selected value="">~~~</option>
-      </select></td>
-      <td><select id="invSelect4">
-          <option selected value="">~~~</option>
-      </select></td>
-    </tr>
-  </table>
-      </br></br></br>
-	    <a class="loginButton" onclick='document.proGame'>[ Apply ]</a>
-	    <a class="loginButton" onclick='document.proGame.homeMenu();'>[ Back ]</a>
- </div>
-  </center>
- <div id = "mainMenu">
-  <a class="menuButton" onClick="document.proGame.menuClick('start');">[ Start Game ] </a></br></br>
- </div>
-
+    <div id="sidebarL">
+      <canvas id="canvas2" width="190" height="600"></canvas>
+    </div>
+    <div id="sidebarR"></div>
+      <canvas id="canvas3" width="190" height="600" hidden></canvas>
+    <div id="centerCanvas">
+      <canvas id="canvas" width="800" height="600"></canvas>
+      <form id="loginForm" onsubmit="document.proGame.submitLogin(false); return false;">
+        <input class="loginInput" placeholder="username" type="text" id="login_q"/>
+        <br>
+        <input class="loginInput" placeholder="password" type="password" id="password_q"/>
+        <br>
+        <div id="loginButtonContainer">
+          <input class="loginButton" type="submit" value="[ continue ]" />
+          <a class="loginButton" onclick='document.proGame.submitLogin(true);'>[ new ]</a>
+        </div>
+      </form>
+      <center>
+        <div id="inventory">
+          <table id = "inventoryTable">
+            <tr>
+              <td> <div class="invBox" id = "invLabel1">Primary</div></td>
+              <td><div class="invBox" id = "invLabel2">Acc. 1</div></td>
+              <td><div class="invBox" id = "invLabel3">Acc. 2</div></td>
+              <td><div class="invBox" id = "invLabel4">Acc. 3</div></td>
+            </tr>
+            <tr>
+              <td><select id="invSelect1">
+                  <option selected value="">~~~</option>
+              </select></td>
+              <td><select id="invSelect2">
+                  <option selected value="">~~~</option>
+              </select></td>
+              <td><select id="invSelect3">
+                  <option selected value="">~~~</option>
+              </select></td>
+              <td><select id="invSelect4">
+                  <option selected value="">~~~</option>
+              </select></td>
+            </tr>
+          </table>
+          <a class="loginButton" onclick='document.proGame'>[ Apply ]</a>
+          <a class="loginButton" onclick='document.proGame.homeMenu();'>[ Back ]</a>
+        </div>
+      </center>
+      <div id = "mainMenu">
+        <a class="menuButton" onClick="document.proGame.menuClick('start');">[ Start Game ] </a></br></br>
+      </div>
+    </div>
+  <div id = "ui">
+    <center>
+      <canvas id="chatCanvas" width="800" height="200"></canvas>
+      <form class="search" id="chat_form" action="javascript:document.proGame.submitChat()" hidden>
+        Chat: <input class="text" type="text" id="chatbox_q"/>
+      </form>
+    </center>
+  </div>
   </div>
 </body>
 </html>
