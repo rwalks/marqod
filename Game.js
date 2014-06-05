@@ -410,18 +410,18 @@ function GamePro() {
               _canvasBufferContext2.fillStyle = 'rgba(239,0,0,1.0)';
               _canvasBufferContext2.fillText(plr.name,71,nameYPos);
               var bigXNum = (plr.kills % 10) * 50;
-              var bigNumXPos = 145 + (190 * (pid-1));
+              var bigNumYPos = 13 + (100 * (pid-1));
               _canvasBufferContext2.drawImage(big_nums_img,
                                               bigXNum,0,
                                               50,85,
-                                              bigNumXPos,13,
+                                              145,bigNumYPos,
                                               50,85);
               var lilXNum = Math.floor(plr.kills/10) * 25;
-              var lilNumXPos = 135 + (190 * (pid-1));
+              var lilNumYPos = 52 + (100 * (pid-1));
               _canvasBufferContext2.drawImage(lil_nums_img,
                                               lilXNum,0,
                                               25,43,
-                                              lilNumXPos,52,
+                                              135,lilNumYPos,
                                               25,43);
             }
           }
