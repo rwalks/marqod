@@ -75,7 +75,7 @@ io.sockets.on('connection', function (socket) {
       var tDeaths = players[socket.id].maxDeaths;
       var pid = engine.addPlayer(false,tKills,tDeaths,name);
       players[socket.id].playerId = pid;
-      chatBuffer.unshift("::::DEHUMANIZE YOURSELF "+ name +" AND FACE TO BLOODSHED::::");
+      chatBuffer.unshift("::::A NERD APPROACHES: Welcome "+ name +" ::::");
       socket.emit('init',{'playerId' : pid});
       socket.emit('chat_buffer',{'buffer':chatBuffer});
       if (firstConnect){
@@ -249,7 +249,7 @@ function tick() {
   for(p in engine.newPlayers){
     io.sockets.emit('spawn',engine.newPlayers.shift());
   }
-  io.sockets.emit('push',engine.game_state);
+  io.sockets.emit('push',{state: engine.game_state, timestamp: Date.now()});
   if(count % 10 == 0){
     io.sockets.emit('queue',{names:engine.queue_names(),
                              active:engine.active_players});

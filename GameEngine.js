@@ -21,6 +21,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
     this.clientBuffer = [];
     game_engine = this;
     var lastUpdate = +new Date;
+    var latency = 0;
     var lastMessage = +new Date;
     var deleteQueue = {'players': [], 'ammos': [], 'hitBoxes':[]};
     var playerIndex = 1;
@@ -196,7 +197,7 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
           if (pl){
             try{
               if(objTypes[ob] == 'players'){
-                pl.update(lastUpdate,this.tiles);
+                pl.update(lastUpdate,latency,this.tiles);
               }else{
                 pl.update(lastUpdate);
               }

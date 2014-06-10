@@ -229,7 +229,8 @@ function GamePro() {
 
       socket.on('push', function (data) {
         if (gameActive) {
-          game_engine.pushData = data;
+          game_engine.pushData = data.state;
+          game_engine.latency = Date.now() - data.timestamp;
         }
       });
 

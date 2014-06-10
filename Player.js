@@ -18,7 +18,6 @@ exports.Player = function(pid,server,player_img,models) {
   this.position.y = 85;
   this.velocity = {x:0,y:0};
   this.deltaV = {x:0,y:0};
-  var serverTime = server ? 0 : 0;
   this.maxHealth = 100;
   this.health = 100;
   this.animationFrame = 0;
@@ -74,7 +73,7 @@ exports.Player = function(pid,server,player_img,models) {
     return ret;
   }
 
-  this.update = function(lastUpdate,tiles){
+  this.update = function(lastUpdate,latency,tiles){
     if(this.spawn_count > 0){ this.spawn_count -= 1;}
     var interv = (attack_states[this.state]) ? attackAnimationInterval : animationInterval;
     if(animationCount == interv){
@@ -114,8 +113,8 @@ exports.Player = function(pid,server,player_img,models) {
       var deltaT = Date.now() - lastUpdate;
 
       this.velocity.y += 30; //GRAVITAS
-      this.deltaV.x = (this.velocity.x / 1000) * (deltaT + serverTime);
-      this.deltaV.y = (this.velocity.y / 1000) * (deltaT + serverTime);
+      this.deltaV.x = (this.velocity.x / 1000) * (deltaT + latency);
+      this.deltaV.y = (this.velocity.y / 1000) * (deltaT + latency);
       //air friction
       this.deltaV.x = this.deltaV.x * 0.9;
       this.deltaV.y = this.deltaV.y * 0.9;
@@ -123,8 +122,8 @@ exports.Player = function(pid,server,player_img,models) {
 
       this.position.x += this.deltaV.x;
       this.position.y += this.deltaV.y;
-      this.velocity.x = (this.deltaV.x * 1000) / (deltaT + serverTime);
-      this.velocity.y = (this.deltaV.y * 1000) / (deltaT + serverTime);
+      this.velocity.x = (this.deltaV.x * 1000) / (deltaT + latency);
+      this.velocity.y = (this.deltaV.y * 1000) / (deltaT + latency);
 
     }
      if(this.state == "land"    ||
