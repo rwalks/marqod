@@ -314,12 +314,17 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
 
     this.apply_player_message = function(message) {
       //  changle player state based upon message
+        if(message.disconnect){
+          delete respawn_queue[message.playerId];
+          for(i in this.player_queue){
+            if(this.player_queue[i].id == message.playerId){
+              this.player_queue.splice(i,1);
+            }
+          }
+        }
         var p = this.getPlayer(message.playerId);
         if (p){
           if(message.kill){
-            if(message.disconnect){
-              delete respawn_queue[p.id];
-            }
             this.killPlayer(p.id,false);
           }else {
             var objs = p.update_state(message);
@@ -376,11 +381,6 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
 
     this.dropObject = function(id, type) {
       if(type == 'players'){
-        for(i in this.player_queue){
-          if(this.player_queue[i].id == id){
-            this.player_queue.splice(i,1);
-          }
-        }
       }
       if (server) {
         this.game_state[type][id] = false;

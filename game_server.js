@@ -215,8 +215,12 @@ function dropPlayer(socket) {
   try {
     var accountData = players[socket.id];
     if(players[socket.id] && players[socket.id].playerId){
-      var kills = engine.game_state.players[accountData.playerId].totalKills;
-      var deaths = engine.game_state.players[accountData.playerId].totalDeaths;
+      var kills = 0;
+      var deaths = 0;
+      if(engine.game_state.players[accountData.playerId]){
+        kills = engine.game_state.players[accountData.playerId].totalKills;
+        deaths = engine.game_state.players[accountData.playerId].totalDeaths;
+      }
       accountData.maxKills = (kills > accountData.maxKills) ? kills : accountData.maxKills;
       accountData.maxDeaths = (deaths > accountData.maxDeaths) ? deaths : accountData.maxDeaths;
       var msg = {playerId:players[socket.id].playerId,kill:true,disconnect:true};
@@ -231,7 +235,8 @@ function dropPlayer(socket) {
         }
       });
     });
-  } catch (e) {}
+  } catch (e) {
+}
 }
 
 function getPlayer(pid){
