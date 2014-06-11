@@ -88,12 +88,20 @@ td {
   left : 118px;
   position: relative;
   width: 140px;
+  height: 20px;
+  border: none;
+  font-size: 18px;
+  font: 'futura';
 }
 #password_q{
   top : -165px;
   left : 118px;
   position: relative;
   width: 140px;
+  height: 20px;
+  border: none;
+  font-size: 18px;
+  font: 'futura';
 }
 #loginButtonContainer{
   top : -160px;
