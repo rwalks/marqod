@@ -219,7 +219,7 @@ function dropPlayer(socket) {
       var deaths = engine.game_state.players[accountData.playerId].totalDeaths;
       accountData.maxKills = (kills > accountData.maxKills) ? kills : accountData.maxKills;
       accountData.maxDeaths = (deaths > accountData.maxDeaths) ? deaths : accountData.maxDeaths;
-      var msg = {playerId:players[socket.id].playerId,kill:true};
+      var msg = {playerId:players[socket.id].playerId,kill:true,disconnect:true};
       engine.queue_message(msg);
       io.sockets.emit("player_event", msg);
     }

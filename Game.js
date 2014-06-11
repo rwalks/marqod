@@ -15,17 +15,20 @@ function GamePro() {
     var player;
     var player_img;
     var tile_img;
+    var login_img;
     var bg_img;
     var spawn_img;
     var hud_img;
     var gameActive = false;
     var banner = new Banner();
-    var uiMode = 'login';
+    var uiMode = 'loading';
     var salt;
     var loaded = false;
     var player_id;
     var uiFrame = 0;
     var uiCount = 0;
+    var loading_state = 0;
+    var image_count = 0;
 
     this.engine = function(){
       return game_engine();
@@ -37,7 +40,7 @@ function GamePro() {
         _canvas2 = document.getElementById('canvas2');
         _canvas3 = document.getElementById('canvas3');
         _chatCanvas = document.getElementById('chatCanvas');
-        uiMode = 'login';
+        uiMode = 'loading';
         if (_canvas && _canvas.getContext) {
             //main
             _canvasContext = _canvas.getContext('2d');
@@ -64,13 +67,63 @@ function GamePro() {
             _chatCanBuffer.height = _chatCanvas.height;
             _chatCanBufferContext = _chatCanBuffer.getContext('2d');
             game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, shitLord, hitBox, terrain, tile, animation);
+            load_images();
             this.mainMenu = $("#mainMenu");
             this.mainMenu.hide();
+            $("#sidebarL").hide();
+            $('#loginForm').hide();
             this.inventoryMenu = $("#inventory");
             this.inventoryMenu.hide();
             return true;
         }
         return false;
+    }
+
+    function load_images(){
+        image_count = 8;
+        bg_img = new Image;
+        bg_img.src = "images/paperBG.png";
+        bg_img.onload = function(){
+          loading_state += 1;
+        }
+        login_img = new Image;
+        login_img.src = "images/login_screen.png";
+        login_img.onload = function(){
+          loading_state += 1;
+        }
+        big_nums_img = new Image;
+        big_nums_img.src = "images/Numbers.png";
+        big_nums_img.onload = function(){
+          loading_state += 1;
+        }
+        lil_nums_img = new Image;
+        lil_nums_img.src = "images/smallNumbers.png";
+        lil_nums_img.onload = function(){
+          loading_state += 1;
+        }
+        hud_img = new Image;
+        hud_img.src = "images/HUD_Sheet.png";
+        hud_img.onload = function(){
+          loading_state += 1;
+        }
+        tile_img = new Image;
+        tile_img.src = "images/tile_set.png";
+        tile_img.onload = function(){
+          game_engine.tile_img = tile_img;
+          loading_state += 1;
+        }
+        spawn_img = new Image;
+        spawn_img.src = "images/spawn.png";
+        spawn_img.onload = function(){
+          game_engine.spawn_img = spawn_img;
+          loading_state += 1;
+        }
+        player_img = new Image;
+        player_img.src = "images/shitLord.png";
+        player_img.onload = function(){
+          game_engine.player_img = player_img;
+          loading_state += 1;
+        }
     }
 
     function LoadContent (data) {
@@ -96,38 +149,13 @@ function GamePro() {
           return false;
         });
 
-  	//images
-        //imagebg = new Image();
-        //imagebg.src = 'images/marqod.png';
+        setPlayer(data);
+        game_engine.generate_level();
+        gameActive = true;
         uiMode = "game";
-        bg_img = new Image;
-        bg_img.src = "images/paperBG.png";
-        big_nums_img = new Image;
-        big_nums_img.src = "images/Numbers.png";
-        lil_nums_img = new Image;
-        lil_nums_img.src = "images/smallNumbers.png";
-        hud_img = new Image;
-        hud_img.src = "images/HUD_Sheet.png";
-        tile_img = new Image;
-        tile_img.src = "images/tile_set.png";
-        tile_img.onload = function(){
-          game_engine.tile_img = tile_img;
-        }
-        spawn_img = new Image;
-        spawn_img.src = "images/spawn.png";
-        spawn_img.onload = function(){
-          game_engine.spawn_img = spawn_img;
-        }
-        player_img = new Image;
-        player_img.onload = function(){
-          setPlayer(data);
-          game_engine.player_img = player_img;
-          game_engine.generate_level();
-          gameActive = true;
-        }
-        player_img.src = "images/shitLord.png";
         $("#chat_form").show()
         $("#canvas3").show()
+        $("#sidebarL").show()
     }
 
     this.Run = function () {
@@ -284,6 +312,7 @@ function GamePro() {
       if (!gameActive){
         clearMenus();
         $('#mainMenu').show();
+        uiMode = "menu";
       }
     }
 
@@ -366,7 +395,6 @@ function GamePro() {
         //_canvasBufferContext.globalCompositeOperation="source-atop";
         _canvasContext3.drawImage(_canvasBuffer3, 0, 0);
     }
-
 
     this.drawUI = function() {
         uiCount += 1;
@@ -470,11 +498,11 @@ function GamePro() {
         //clear canvas
         _canvasBufferContext.clearRect(0, 0, _canvas.width, _canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
-        _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.7)';
+        _canvasBufferContext.fillStyle = 'rgba(0,0,0,0.7)';
         _canvasBufferContext.globalCompositeOperation="destination-over";
         _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
-        if(bg_img){
+        if(bg_img && uiMode == "game"){
         _canvasBufferContext.drawImage(bg_img,
 		      0,0,
 		      800,600,
@@ -483,8 +511,25 @@ function GamePro() {
 	             );
       }
 
-        if (uiMode == "login" || uiMode == "menu") {
-            banner.draw(_canvasBufferContext);
+        if (uiMode == "loading") {
+            _canvasBufferContext.font = '20px Courier';
+            _canvasBufferContext.fillStyle = 'rgba(250,0,250,1.0)';
+            _canvasBufferContext.fillText("LOADING",30,200);
+            banner.draw(_canvasBufferContext,loading_state/image_count);
+
+            if(loading_state >= image_count){
+              uiMode = "login";
+              $('#loginForm').show();
+            }
+        }else if (uiMode == "login") {
+          _canvasBufferContext.drawImage(login_img,
+            0,0,
+            800,600,
+            0,0,
+            800,600
+                 );
+        }else if (uiMode == "menu") {
+            banner.draw(_canvasBufferContext,1.0);
         }
         for(p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];

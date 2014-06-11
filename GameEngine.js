@@ -317,6 +317,9 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM
         var p = this.getPlayer(message.playerId);
         if (p){
           if(message.kill){
+            if(message.disconnect){
+              delete respawn_queue[p.id];
+            }
             this.killPlayer(p.id,false);
           }else {
             var objs = p.update_state(message);

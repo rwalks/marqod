@@ -60,8 +60,8 @@
         <input class="loginInput" placeholder="password" type="password" id="password_q"/>
         <br>
         <div id="loginButtonContainer">
-          <input class="loginButton" type="submit" value="[ continue ]" />
-          <a class="loginButton" onclick='document.proGame.submitLogin(true);'>[ new ]</a>
+          <input class="loginButton" type="submit" value="[ continue ]" id="continue"/>
+          <a class="loginButton" onclick='document.proGame.submitLogin(true);' id="new">[ new ]</a>
         </div>
       </form>
       <center>
@@ -93,7 +93,7 @@
         </div>
       </center>
       <div id = "mainMenu">
-        <a class="menuButton" onClick="document.proGame.menuClick('start');">[ Start Game ] </a></br></br>
+        <a class="loginButton" onClick="document.proGame.menuClick('start');">[ Start Game ] </a></br></br>
       </div>
     </div>
   <div id = "ui">
