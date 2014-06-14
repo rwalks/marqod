@@ -29,6 +29,9 @@ function GamePro() {
     var uiCount = 0;
     var loading_state = 0;
     var image_count = 0;
+    var opac = 0;
+    var typing_mode = false;
+    var chat_string = "";
 
     this.engine = function(){
       return game_engine();
@@ -39,7 +42,7 @@ function GamePro() {
         _canvas = document.getElementById('canvas');
         _canvas2 = document.getElementById('canvas2');
         _canvas3 = document.getElementById('canvas3');
-        _chatCanvas = document.getElementById('chatCanvas');
+        _canvas4 = document.getElementById('canvas4');
         uiMode = 'loading';
         if (_canvas && _canvas.getContext) {
             //main
@@ -61,16 +64,17 @@ function GamePro() {
             _canvasBuffer3.height = _canvas3.height;
             _canvasBufferContext3 = _canvasBuffer3.getContext('2d');
             //chat
-            _chatContext = _chatCanvas.getContext('2d');
-            _chatCanBuffer = document.createElement('canvas');
-            _chatCanBuffer.width = _chatCanvas.width;
-            _chatCanBuffer.height = _chatCanvas.height;
-            _chatCanBufferContext = _chatCanBuffer.getContext('2d');
+            _canvasContext4 = _canvas4.getContext('2d');
+            _canvasBuffer4 = document.createElement('canvas');
+            _canvasBuffer4.width = _canvas4.width;
+            _canvasBuffer4.height = _canvas4.height;
+            _canvasBufferContext4 = _canvasBuffer4.getContext('2d');
             game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, shitLord, hitBox, terrain, tile, animation);
             load_images();
             this.mainMenu = $("#mainMenu");
             this.mainMenu.hide();
             $("#sidebarL").hide();
+            $("#ui").hide();
             $('#loginForm').hide();
             this.inventoryMenu = $("#inventory");
             this.inventoryMenu.hide();
@@ -153,7 +157,7 @@ function GamePro() {
         game_engine.generate_level();
         gameActive = true;
         uiMode = "game";
-        $("#chat_form").show()
+        $("#ui").show()
         $("#canvas3").show()
         $("#sidebarL").show()
     }
@@ -225,13 +229,29 @@ function GamePro() {
           case 'contextmenu':
           case 'click':
             if (event.target.id == 'canvas' || event.target.class == 'controls'){
-              $("#chatbox_q").blur();
               mousePos = getPosition(event);
               msg = player.click_message('click',mousePos,event.which);
             }
             break;
           case 'keydown':
-            msg = player.action_message(event.keyCode,true);
+            console.log(event.keyCode);
+            if(event.keyCode == 13){
+              if(typing_mode){
+                if(chat_string.length > 0){
+                  socket.emit('chat_message', {text: chat_string});
+                }
+              }
+              typing_mode = !typing_mode;
+              chat_string = "";
+            }else if(typing_mode){
+              if(event.keyCode == 8){
+                chat_string = chat_string.substring(0,chat_string.length-1);
+              }else{
+                chat_string += String.fromCharCode(event.keyCode);
+              }
+            }else{
+              msg = player.action_message(event.keyCode,true);
+            }
             break;
           case 'keyup':
             msg = player.action_message(event.keyCode,false);
@@ -264,12 +284,10 @@ function GamePro() {
 
       socket.on('chat_buffer', function (data) {
         chatBuffer = data.buffer;
-        document.proGame.draw_chat();
       });
 
       socket.on('chat_message', function (data) {
         document.proGame.receive_chat(data);
-        document.proGame.draw_chat();
       });
 
       socket.on('player_event', function (msg) {
@@ -403,12 +421,12 @@ function GamePro() {
           uiCount = 0;
         }
 
-        _canvasBufferContext2.clearRect(0, 0, _canvas2.width, _canvas2.height);
-        _canvasBufferContext2.globalCompositeOperation="source-over";
-        _canvasBufferContext2.fillStyle = 'rgba(0,0,0,1.0)';
-        _canvasBufferContext2.globalCompositeOperation="destination-over";
-        _canvasBufferContext2.fillRect(0,0,_canvas2.width,_canvas2.height);
-        _canvasBufferContext2.globalCompositeOperation="source-over";
+        _canvasBufferContext4.clearRect(0, 0, _canvas2.width, _canvas2.height);
+        _canvasBufferContext4.globalCompositeOperation="source-over";
+        _canvasBufferContext4.fillStyle = 'rgba(0,0,0,1.0)';
+        _canvasBufferContext4.globalCompositeOperation="destination-over";
+        _canvasBufferContext4.fillRect(0,0,_canvas4.width,_canvas4.height);
+        _canvasBufferContext4.globalCompositeOperation="source-over";
 
         for(pid in game_engine.active_players){
           if(hud_img && big_nums_img && lil_nums_img){
@@ -422,75 +440,69 @@ function GamePro() {
               plr = game_engine.getPlayer(game_engine.active_players[pid]);
               if(plr){hudColor = plr.playerColor();}
             }
-            var yPos = 100*(pid-1);
-            _canvasBufferContext2.fillStyle = hudColor;
-            _canvasBufferContext2.fillRect(0,yPos,190,100);
-            _canvasBufferContext2.drawImage(hud_img,
+            var xPos = 190*(pid-1);
+            _canvasBufferContext4.fillStyle = hudColor;
+            _canvasBufferContext4.fillRect(xPos,0,190,100);
+            _canvasBufferContext4.drawImage(hud_img,
                          190*uiFrame,yOffset,
                          190,100,
-                         0,yPos,
+                         xPos,0,
                          190,100);
 
 
             if(plr && plr.name){
-              _canvasBufferContext2.globalCompositeOperation="source-over";
-              var nameYPos = 26 + (100 * (pid-1));
-              _canvasBufferContext2.font = '15px Impact';
-              _canvasBufferContext2.fillStyle = 'rgba(239,0,0,1.0)';
-              _canvasBufferContext2.fillText(plr.name,71,nameYPos);
+              _canvasBufferContext4.globalCompositeOperation="source-over";
+              var nameXPos = 71 + (190 * (pid-1));
+              _canvasBufferContext4.font = '15px Impact';
+              _canvasBufferContext4.fillStyle = 'rgba(239,0,0,1.0)';
+              _canvasBufferContext4.fillText(plr.name,nameXPos,26);
               var bigXNum = (plr.kills % 10) * 50;
-              var bigNumYPos = 13 + (100 * (pid-1));
-              _canvasBufferContext2.drawImage(big_nums_img,
+              var bigNumXPos = 145 + (190 * (pid-1));
+              _canvasBufferContext4.drawImage(big_nums_img,
                                               bigXNum,0,
                                               50,85,
-                                              145,bigNumYPos,
+                                              bigNumXPos,13,
                                               50,85);
               var lilXNum = Math.floor(plr.kills/10) * 25;
-              var lilNumYPos = 52 + (100 * (pid-1));
-              _canvasBufferContext2.drawImage(lil_nums_img,
+              var lilNumXPos = 135 + (190 * (pid-1));
+              _canvasBufferContext4.drawImage(lil_nums_img,
                                               lilXNum,0,
                                               25,43,
-                                              135,lilNumYPos,
+                                              lilNumXPos,52,
                                               25,43);
             }
           }
         }
 
-        _canvasContext2.clearRect(0, 0, _canvas2.width, _canvas2.height);
+        _canvasContext4.clearRect(0, 0, _canvas4.width, _canvas4.height);
         //_canvasBufferContext.globalCompositeOperation="source-atop";
-        _canvasContext2.drawImage(_canvasBuffer2, 0, 0);
+        _canvasContext4.drawImage(_canvasBuffer4, 0, 0);
     }
 
     this.receive_chat = function(data) {
       chatBuffer.unshift(data.message);
       this.draw_chat();
-    }
-
-    this.submitChat = function() {
-      inputField = $('#chatbox_q');
-      socket.emit('chat_message', {text: inputField.val()});
-      inputField.val('');
+      opac = 1;
     }
 
     this.draw_chat = function() {
-        _chatCanBufferContext.clearRect(0, 0, _chatCanvas.width, _chatCanvas.height);
-        _chatCanBufferContext.globalCompositeOperation="source-over";
-        _chatCanBufferContext.fillStyle = 'rgba(200,200,200,0.9)';
-        _chatCanBufferContext.fillRect(0,0,_chatCanvas.width,_chatCanvas.height);
-        var y = _chatCanvas.height - 12;
-        _chatCanBufferContext.globalCompositeOperation="source-atop";
-        _chatCanBufferContext.fillStyle = "blue";
-        _chatCanBufferContext.font = "12pt Arial";
-        for (msg in chatBuffer) {
-          if (y >= 0){
-            mesg = chatBuffer[msg];
-            _chatCanBufferContext.fillText("> "+mesg, 10, y);
-            y = y-20;
+        if(typing_mode || opac > 0){
+          var y = _canvas.height - 4;
+          var opacity = typing_mode ? 1 : opac;
+          _canvasBufferContext.globalCompositeOperation="source-atop";
+          _canvasBufferContext.fillStyle = "rgba(250,0,250,"+opacity+")";
+          _canvasBufferContext.font = "12pt Arial";
+          _canvasBufferContext.fillText("> ~: "+chat_string, 10, y);
+          y -= 20;
+          for (msg in chatBuffer.slice(0,6)) {
+            if (y >= 0){
+              mesg = chatBuffer[msg];
+              _canvasBufferContext.fillText("> "+mesg, 10, y);
+              y -= 20;
+            }
           }
-        }
-        _chatContext.clearRect(0, 0, _chatCanvas.width, _chatCanvas.height);
-        //_canvasBufferContext.globalCompositeOperation="source-atop";
-        _chatContext.drawImage(_chatCanBuffer, 0, 0);
+          opac = (opac > 0) ? opac -= 0.01 : opac;
+        }else{}
     }
 
 
@@ -590,6 +602,7 @@ function GamePro() {
         }
         }
         //this.draw_commandBar();
+        this.draw_chat();
         //draw buffer on screen
         _canvasContext.clearRect(0, 0, _canvas.width, _canvas.height);
         //_canvasBufferContext.globalCompositeOperation="source-atop";
