@@ -91,7 +91,7 @@ io.sockets.on('connection', function (socket) {
         var msg = { message: plr.login+": "+ data.text };
         chatBuffer.unshift(msg.message);
         if(chatBuffer.length > 30){
-          chatBuffer.pop();
+          chatBuffer = chatBuffer.splice(0,31);
         }
         socket.emit('chat_message', msg);
         socket.broadcast.emit('chat_message', msg);

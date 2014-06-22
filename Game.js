@@ -234,7 +234,6 @@ function GamePro() {
             }
             break;
           case 'keydown':
-            console.log(event.keyCode);
             if(event.keyCode == 13){
               if(typing_mode){
                 if(chat_string.length > 0){
