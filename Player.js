@@ -96,7 +96,7 @@ exports.Player = function(pid,server,player_img,models) {
       }
     }
     if(this.spawn_count <= 0){
-      var move_val = 20
+      var move_val = character.mov_val;
       if (moveFlags.left){
         this.velocity.x -= move_val;
       }
@@ -112,7 +112,7 @@ exports.Player = function(pid,server,player_img,models) {
 
       var deltaT = Date.now() - lastUpdate;
 
-      this.velocity.y += 30; //GRAVITAS
+      this.velocity.y += character.grav_val; //GRAVITAS
       this.deltaV.x = (this.velocity.x / 1000) * (deltaT + latency);
       this.deltaV.y = (this.velocity.y / 1000) * (deltaT + latency);
       //air friction
