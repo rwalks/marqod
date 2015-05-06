@@ -2,7 +2,7 @@
 
 exports.ShitLord = function() {
 
-  this.mov_val = 20;
+  this.grav_val = 20;
   this.mov_val = 35;
 
   this.poly = function(position){
