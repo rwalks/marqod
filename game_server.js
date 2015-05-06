@@ -9,11 +9,12 @@ var eng = require('./GameEngine.js');
 var playerModel = require('./Player.js');
 var weapon = require('./Weapon.js');
 var ammo = require('./Ammo.js');
-var wall = require('./Wall.js');
 var account = require('./Account.js');
 var players = {};
 var nonces = {};
 var firstConnect = true;
+var count = 0;
+var chatBuffer = [];
 
 var mongo = require('mongodb'),
       Server = mongo.Server,
@@ -29,6 +30,7 @@ var app = http.createServer(handler),
 io.set('log level', 1); //reduce lawg)
 
 var engine = new eng.GameEngine(true,false);
+engine.generate_level();
 engine.Run();
 
 function handler (req, res) {
@@ -69,12 +71,31 @@ io.sockets.on('connection', function (socket) {
 
   socket.on('join', function(data){
     if (players[socket.id]) {
-      var pid = engine.addPlayer(false);
+      var name = players[socket.id].login;
+      var tKills = players[socket.id].maxKills;
+      var tDeaths = players[socket.id].maxDeaths;
+      var pid = engine.addPlayer(false,tKills,tDeaths,name);
       players[socket.id].playerId = pid;
-      socket.emit('init',{'playerId' : pid})
+      chatBuffer.unshift("::::A NERD APPROACHES: Welcome "+ name +" ::::");
+      socket.emit('init',{'playerId' : pid});
+      socket.emit('chat_buffer',{'buffer':chatBuffer});
       if (firstConnect){
-        engine.spawnWave(1);
         firstConnect = false;
+      }
+    }
+  });
+
+  socket.on('chat_message', function(data) {
+    if(data && data.text){
+      var plr = players[socket.id];
+      if(plr && plr.login){
+        var msg = { message: plr.login+": "+ data.text };
+        chatBuffer.unshift(msg.message);
+        if(chatBuffer.length > 30){
+          chatBuffer = chatBuffer.splice(0,31);
+        }
+        socket.emit('chat_message', msg);
+        socket.broadcast.emit('chat_message', msg);
       }
     }
   });
@@ -111,6 +132,7 @@ function handle_message(socket, msg) {
     if (msg){
       if (validatePlayer(socket, msg.playerId)){
         engine.queue_message(msg);
+        socket.broadcast.emit("player_event",msg);
       }
    }
 }
@@ -226,7 +248,8 @@ function createAccount(login,password,socket){
 }
 
 function validatePlayer(socket, id) {
-  return (id == players[socket.id].playerId)
+  var plr = players[socket.id];
+  return (plr) ? (id == plr.playerId) : false;
 }
 
 function generate_session(account) {
@@ -243,12 +266,17 @@ function dropPlayer(socket, drop_session) {
       accountData.session = null;
     }
     if(players[socket.id] && players[socket.id].playerId){
-      var highWave = engine.game_state.players[accountData.playerId].highWave;
-      accountData.maxWave = (highWave > accountData.maxWave) ? highWave : accountData.maxWave;
-      var kills = engine.game_state.players[accountData.playerId].kills;
+      var kills = 0;
+      var deaths = 0;
+      if(engine.game_state.players[accountData.playerId]){
+        kills = engine.game_state.players[accountData.playerId].totalKills;
+        deaths = engine.game_state.players[accountData.playerId].totalDeaths;
+      }
       accountData.maxKills = (kills > accountData.maxKills) ? kills : accountData.maxKills;
-      engine.dropObject(players[socket.id].playerId,'players');
-      delete players[socket.id].playerId;
+      accountData.maxDeaths = (deaths > accountData.maxDeaths) ? deaths : accountData.maxDeaths;
+      var msg = {playerId:players[socket.id].playerId,kill:true,disconnect:true};
+      engine.queue_message(msg);
+      io.sockets.emit("player_event", msg);
     }
     delete players[socket.id];
     db.collection('marqod', function(err, collection) {
@@ -258,14 +286,30 @@ function dropPlayer(socket, drop_session) {
         }
       });
     });
-  } catch (e) {}
+  } catch (e) {
+}
+}
+
+function getPlayer(pid){
+  for(p in players){
+    if(players[p].playerId == pid){
+      return p;
+    }
+  }
 }
 
 function tick() {
+  count = (count > 10) ? 10 : count + 1;
   engine.deleteSweep();
-  engine.waveCheck(firstConnect);
   engine.Update();
-  io.sockets.emit('push',engine.game_state);
+  for(p in engine.newPlayers){
+    io.sockets.emit('spawn',engine.newPlayers.shift());
+  }
+  io.sockets.emit('push',{state: engine.game_state, timestamp: Date.now()});
+  if(count % 10 == 0){
+    io.sockets.emit('queue',{names:engine.queue_names(),
+                             active:engine.active_players});
+  }
 }
 
 function distance(obj1, obj2) {

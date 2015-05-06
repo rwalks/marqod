@@ -1,10 +1,10 @@
 function GamePro() {
 
-    var _canvas;
-    var _canvasContext;
-    var _canvasBuffer;
-    var _canvasBufferContext;
-    var messageBuffer = [];
+    var _canvas; var _canvas2; var _canvas3; var _chatCanvas;
+    var _canvasContext; var _canvasContext2; var _canvasContext3; var _chatContext;
+    var _canvasBuffer; var _canvasBuffer2; var _canvasBuffer3; var _chatCanBuffer;
+    var _canvasBufferContext; var _canvasBufferContext2; var _canvasBufferContext3; var _chatCanBufferContext;
+    var chatBuffer = [];
     var socket;
     var image1;
     var imagebg;
@@ -13,32 +13,69 @@ function GamePro() {
     var game_engine;
     var socket;
     var player;
+    var player_img;
+    var tile_img;
+    var login_img;
+    var bg_img;
+    var spawn_img;
+    var hud_img;
     var gameActive = false;
     var banner = new Banner();
-    var uiMode = 'login';
+    var uiMode = 'loading';
     var salt;
-    var canvasOffset = {'x':0,'y':0};
+    var loaded = false;
+    var player_id;
+    var uiFrame = 0;
+    var uiCount = 0;
+    var loading_state = 0;
+    var image_count = 0;
+    var opac = 0;
+    var typing_mode = false;
+    var chat_string = "";
+
+    this.engine = function(){
+      return game_engine();
+    }
 
     this.Initialize = function () {
         socket = io.connect();
         _canvas = document.getElementById('canvas');
-        _canvas.tabIndex = 1;//focus
-        uiMode = 'login';
+        _canvas2 = document.getElementById('canvas2');
+        _canvas3 = document.getElementById('canvas3');
+        _canvas4 = document.getElementById('canvas4');
+        uiMode = 'loading';
         if (_canvas && _canvas.getContext) {
-
+            //main
             _canvasContext = _canvas.getContext('2d');
             _canvasBuffer = document.createElement('canvas');
             _canvasBuffer.width = _canvas.width;
             _canvasBuffer.height = _canvas.height;
             _canvasBufferContext = _canvasBuffer.getContext('2d');
-
-            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, beast, wall);
-            this.waveCount = $("#waveCount");
-            this.waveCount.hide();
-            this.killCount = $("#killCount");
-            this.killCount.hide();
+            //score
+            _canvasContext2 = _canvas2.getContext('2d');
+            _canvasBuffer2 = document.createElement('canvas');
+            _canvasBuffer2.width = _canvas2.width;
+            _canvasBuffer2.height = _canvas2.height;
+            _canvasBufferContext2 = _canvasBuffer2.getContext('2d');
+            //playerlist
+            _canvasContext3 = _canvas3.getContext('2d');
+            _canvasBuffer3 = document.createElement('canvas');
+            _canvasBuffer3.width = _canvas3.width;
+            _canvasBuffer3.height = _canvas3.height;
+            _canvasBufferContext3 = _canvasBuffer3.getContext('2d');
+            //chat
+            _canvasContext4 = _canvas4.getContext('2d');
+            _canvasBuffer4 = document.createElement('canvas');
+            _canvasBuffer4.width = _canvas4.width;
+            _canvasBuffer4.height = _canvas4.height;
+            _canvasBufferContext4 = _canvasBuffer4.getContext('2d');
+            game_engine = new engine.GameEngine(false, playerModel, ammo, weapon, shitLord, hitBox, terrain, tile, animation);
+            load_images();
             this.mainMenu = $("#mainMenu");
             this.mainMenu.hide();
+            $("#sidebarL").hide();
+            $("#ui").hide();
+            $('#loginForm').hide();
             this.inventoryMenu = $("#inventory");
             this.inventoryMenu.hide();
             return true;
@@ -46,7 +83,60 @@ function GamePro() {
         return false;
     }
 
-    function LoadContent () {
+    function load_images(){
+        image_count = 8;
+        bg_img = new Image;
+        bg_img.src = "images/paperBG.png";
+        bg_img.onload = function(){
+          loading_state += 1;
+        }
+        login_img = new Image;
+        login_img.src = "images/login_screen.png";
+        login_img.onload = function(){
+          loading_state += 1;
+        }
+        big_nums_img = new Image;
+        big_nums_img.src = "images/Numbers.png";
+        big_nums_img.onload = function(){
+          loading_state += 1;
+        }
+        lil_nums_img = new Image;
+        lil_nums_img.src = "images/smallNumbers.png";
+        lil_nums_img.onload = function(){
+          loading_state += 1;
+        }
+        hud_img = new Image;
+        hud_img.src = "images/HUD_Sheet.png";
+        hud_img.onload = function(){
+          loading_state += 1;
+        }
+        tile_img = new Image;
+        tile_img.src = "images/tile_set.png";
+        tile_img.onload = function(){
+          game_engine.tile_img = tile_img;
+          loading_state += 1;
+        }
+        spawn_img = new Image;
+        spawn_img.src = "images/spawn.png";
+        spawn_img.onload = function(){
+          game_engine.spawn_img = spawn_img;
+          loading_state += 1;
+        }
+        player_img = new Image;
+        player_img.src = "images/shitLord.png";
+        player_img.onload = function(){
+          game_engine.player_img = player_img;
+          loading_state += 1;
+        }
+    }
+
+    function LoadContent (data) {
+        var cookie = $.cookie("progame");
+        if (cookie != null) {
+            //user already finished some maps
+        } else {
+            $.cookie("progame", 1, { expires: 365 });
+        }
         $(document).bind('keyup', function (event) {
             LocalEvent(event);
         });
@@ -57,13 +147,19 @@ function GamePro() {
           event.preventDefault();
             LocalEvent(event);
         });
+        $(document).bind('contextmenu', function (event) {
+          event.preventDefault();
+          LocalEvent(event);
+          return false;
+        });
 
-  	//images
-        //imagebg = new Image();
-        //imagebg.src = 'images/marqod.png';
-        $("#waveCount").show();
-        $("#killCount").show();
+        setPlayer(data);
+        game_engine.generate_level();
+        gameActive = true;
         uiMode = "game";
+        $("#ui").show()
+        $("#canvas3").show()
+        $("#sidebarL").show()
     }
 
     this.Run = function () {
@@ -77,6 +173,7 @@ function GamePro() {
     this.tick = function(){
       game_engine.Update()
       this.Draw();
+      this.drawUI();
     }
 
     this.menuClick = function(action){
@@ -146,14 +243,31 @@ function GamePro() {
       if (event != null){
         var msg = '';
         switch(event.type) {
+          case 'contextmenu':
           case 'click':
             if (event.target.id == 'canvas' || event.target.class == 'controls'){
               mousePos = getPosition(event);
-              msg = player.click_message('click',subCanvasOffset(mousePos));
+              msg = player.click_message('click',mousePos,event.which);
             }
             break;
           case 'keydown':
-            msg = player.action_message(event.keyCode,true);
+            if(event.keyCode == 13){
+              if(typing_mode){
+                if(chat_string.length > 0){
+                  socket.emit('chat_message', {text: chat_string});
+                }
+              }
+              typing_mode = !typing_mode;
+              chat_string = "";
+            }else if(typing_mode){
+              if(event.keyCode == 8){
+                chat_string = chat_string.substring(0,chat_string.length-1);
+              }else{
+                chat_string += String.fromCharCode(event.keyCode);
+              }
+            }else{
+              msg = player.action_message(event.keyCode,true);
+            }
             break;
           case 'keyup':
             msg = player.action_message(event.keyCode,false);
@@ -173,15 +287,42 @@ function GamePro() {
       });
       socket.on('init', function (data) {
         clearMenus();
-        setPlayer(data);
-        LoadContent();
-        gameActive = true;
-        setInterval(function() {document.proGame.updateMenus()}, 1000 / 10);
+        LoadContent(data);
+      //  setInterval(function() {document.proGame.updateMenus()}, 1000 / 10);
       });
 
       socket.on('push', function (data) {
         if (gameActive) {
-          game_engine.pushData = data;
+          game_engine.pushData = data.state;
+          game_engine.latency = Date.now() - data.timestamp;
+        }
+      });
+
+      socket.on('chat_buffer', function (data) {
+        chatBuffer = data.buffer;
+      });
+
+      socket.on('chat_message', function (data) {
+        document.proGame.receive_chat(data);
+      });
+
+      socket.on('player_event', function (msg) {
+        if (gameActive) {
+          game_engine.queue_message(msg);
+        }
+      });
+
+      socket.on('queue', function (msg) {
+        if (msg) {
+          var player_queue = msg.names;
+          game_engine.active_players = msg.active;
+          document.proGame.drawPlayerList(player_queue);
+        }
+      });
+
+      socket.on('spawn', function (msg) {
+        if (msg) {
+          game_engine.spawnAnimation(false,msg.pos,'spawn',spawn_img);
         }
       });
 
@@ -202,7 +343,6 @@ function GamePro() {
           }
           inventory = data.inventory;
           maxKills = data.maxKills;
-          maxWave = data.maxWave;
           document.proGame.homeMenu();
         }
       });
@@ -212,6 +352,7 @@ function GamePro() {
       if (!gameActive){
         clearMenus();
         $('#mainMenu').show();
+        uiMode = "menu";
       }
     }
 
@@ -224,7 +365,8 @@ function GamePro() {
     }
 
     function setPlayer(msg) {
-      player = new playerModel.Player(msg.playerId, false, weapon, ammo);
+      player = new playerModel.Player(msg.playerId, false, player_img, game_engine.playerModels);
+      player_id = player.id;
     }
 
     function getPosition(e) {
@@ -245,21 +387,188 @@ function GamePro() {
       return {"x": x, "y": y};
     };
 
+    this.drawPlayerList = function(player_queue) {
+        _canvasBufferContext3.clearRect(0, 0, _canvas3.width, _canvas3.height);
+        _canvasBufferContext3.globalCompositeOperation="source-over";
+        _canvasBufferContext3.fillStyle = 'rgba(200,200,200,1.0)';
+        _canvasBufferContext3.globalCompositeOperation="destination-over";
+        _canvasBufferContext3.fillRect(0,0,_canvas3.width,_canvas3.height);
+        _canvasBufferContext3.globalCompositeOperation="source-over";
+        _canvasBufferContext3.globalCompositeOperation="source-atop";
+        _canvasBufferContext3.fillStyle = "blue";
+        _canvasBufferContext3.font = "10pt Arial";
+        var xOff = 10;
+        var yOff = 20;
+        _canvasBufferContext3.fillText(" ## |  Name  | Kills | Deaths",xOff,yOff);
+        yOff += 20;
+        _canvasBufferContext3.fillStyle = "blue";
+        _canvasBufferContext3.font = "10pt Arial";
+        _canvasBufferContext3.fillText("Active:",xOff,yOff);
+        yOff += 20;
+        _canvasBufferContext3.fillStyle = "red";
+        _canvasBufferContext3.font = "12pt Arial";
+        for (pid in game_engine.active_players) {
+            var plr = game_engine.getPlayer(game_engine.active_players[pid]);
+            var name = plr ? plr.name : "---------";
+            var ks = plr ? plr.totalKills : "----";
+            var ds = plr ? plr.totalDeaths : "----";
+            _canvasBufferContext3.fillText(" "+pid + "  : " + name + " : " + ks + " : " + ds,xOff,yOff);
+            yOff += 20;
+        }
+        _canvasBufferContext3.fillStyle = "blue";
+        _canvasBufferContext3.font = "10pt Arial";
+        _canvasBufferContext3.fillText("Queue:",xOff,yOff);
+        yOff += 20;
+        _canvasBufferContext3.fillStyle = "purple";
+        for (p in player_queue) {
+            var plr = player_queue[p];
+            var name = plr ? plr.name : "---------";
+            var ks = plr ? plr.kills : "----";
+            var ds = plr ? plr.deaths : "----";
+            if(yOff < _canvas3.height){
+              _canvasBufferContext3.fillText((parseInt(p)+1) + " : " + name + " : " + ks + " : " + ds,xOff,yOff);
+            }
+            yOff += 20;
+        }
+
+        _canvasContext3.clearRect(0, 0, _canvas3.width, _canvas3.height);
+        //_canvasBufferContext.globalCompositeOperation="source-atop";
+        _canvasContext3.drawImage(_canvasBuffer3, 0, 0);
+    }
+
+    this.drawUI = function() {
+        uiCount += 1;
+        if(uiCount > 20){
+          uiFrame = (uiFrame > 3) ? 0 : uiFrame + 1;
+          uiCount = 0;
+        }
+
+        _canvasBufferContext4.clearRect(0, 0, _canvas2.width, _canvas2.height);
+        _canvasBufferContext4.globalCompositeOperation="source-over";
+        _canvasBufferContext4.fillStyle = 'rgba(0,0,0,1.0)';
+        _canvasBufferContext4.globalCompositeOperation="destination-over";
+        _canvasBufferContext4.fillRect(0,0,_canvas4.width,_canvas4.height);
+        _canvasBufferContext4.globalCompositeOperation="source-over";
+
+        for(pid in game_engine.active_players){
+          if(hud_img && big_nums_img && lil_nums_img){
+            var yOffset = 0;
+            var plr = false;
+            var hudColor = 'rgba(50,50,50,1.0)';
+            if(game_engine.active_players[pid] == false){
+              yOffset = 0;
+            }else{
+              yOffset = 200;
+              plr = game_engine.getPlayer(game_engine.active_players[pid]);
+              if(plr){hudColor = plr.playerColor();}
+            }
+            var xPos = 190*(pid-1);
+            _canvasBufferContext4.fillStyle = hudColor;
+            _canvasBufferContext4.fillRect(xPos,0,190,100);
+            _canvasBufferContext4.drawImage(hud_img,
+                         190*uiFrame,yOffset,
+                         190,100,
+                         xPos,0,
+                         190,100);
+
+
+            if(plr && plr.name){
+              _canvasBufferContext4.globalCompositeOperation="source-over";
+              var nameXPos = 71 + (190 * (pid-1));
+              _canvasBufferContext4.font = '15px Impact';
+              _canvasBufferContext4.fillStyle = 'rgba(239,0,0,1.0)';
+              _canvasBufferContext4.fillText(plr.name,nameXPos,26);
+              var bigXNum = (plr.kills % 10) * 50;
+              var bigNumXPos = 145 + (190 * (pid-1));
+              _canvasBufferContext4.drawImage(big_nums_img,
+                                              bigXNum,0,
+                                              50,85,
+                                              bigNumXPos,13,
+                                              50,85);
+              var lilXNum = Math.floor(plr.kills/10) * 25;
+              var lilNumXPos = 135 + (190 * (pid-1));
+              _canvasBufferContext4.drawImage(lil_nums_img,
+                                              lilXNum,0,
+                                              25,43,
+                                              lilNumXPos,52,
+                                              25,43);
+            }
+          }
+        }
+
+        _canvasContext4.clearRect(0, 0, _canvas4.width, _canvas4.height);
+        //_canvasBufferContext.globalCompositeOperation="source-atop";
+        _canvasContext4.drawImage(_canvasBuffer4, 0, 0);
+    }
+
+    this.receive_chat = function(data) {
+      chatBuffer.unshift(data.message);
+      this.draw_chat();
+      opac = 1;
+    }
+
+    this.draw_chat = function() {
+        if(typing_mode || opac > 0){
+          var y = _canvas.height - 4;
+          var opacity = typing_mode ? 1 : opac;
+          _canvasBufferContext.globalCompositeOperation="source-atop";
+          _canvasBufferContext.fillStyle = "rgba(250,0,250,"+opacity+")";
+          _canvasBufferContext.font = "12pt Arial";
+          _canvasBufferContext.fillText("> ~: "+chat_string, 10, y);
+          y -= 20;
+          for (msg in chatBuffer.slice(0,6)) {
+            if (y >= 0){
+              mesg = chatBuffer[msg];
+              _canvasBufferContext.fillText("> "+mesg, 10, y);
+              y -= 20;
+            }
+          }
+          opac = (opac > 0) ? opac -= 0.01 : opac;
+        }else{}
+    }
+
+
     this.Draw = function () {
      //   canvasOffset = player.deltaPos;
      //   _canvasBufferContext.translate(player.deltaPos.x, player.deltaPod.y);
         //clear canvas
         _canvasBufferContext.clearRect(0, 0, _canvas.width, _canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
-        _canvasBufferContext.fillStyle = 'rgba(250,250,250,0.7)';
+        _canvasBufferContext.fillStyle = 'rgba(0,0,0,0.7)';
         _canvasBufferContext.globalCompositeOperation="destination-over";
         bg = new Image();
         bg.src = "bg_b1.png"
         _canvasBufferContext.drawImage(bg,0,0);
         //_canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
-        if (uiMode == "login" || uiMode == "menu") {
-            banner.draw(_canvasBufferContext);
+        if(bg_img && uiMode == "game"){
+        _canvasBufferContext.drawImage(bg_img,
+		      0,0,
+		      800,600,
+          0,0,
+		      800,600
+	             );
+      }
+
+        if (uiMode == "loading") {
+            _canvasBufferContext.font = '20px Courier';
+            _canvasBufferContext.fillStyle = 'rgba(250,0,250,1.0)';
+            _canvasBufferContext.fillText("LOADING",30,200);
+            banner.draw(_canvasBufferContext,loading_state/image_count);
+
+            if(loading_state >= image_count){
+              uiMode = "login";
+              $('#loginForm').show();
+            }
+        }else if (uiMode == "login") {
+          _canvasBufferContext.drawImage(login_img,
+            0,0,
+            800,600,
+            0,0,
+            800,600
+                 );
+        }else if (uiMode == "menu") {
+            banner.draw(_canvasBufferContext,1.0);
         }
         if (player){
           plr = game_engine.game_state.players[player.id];
@@ -272,21 +581,41 @@ function GamePro() {
           var plr = game_engine.game_state.players[p];
           pos = addCanvasOffset(plr.position);
           //draw player
-          _canvasBufferContext.fillStyle = plr.playerColor[p % 6];
-          _canvasBufferContext.font = '12px Georgia';
-          _canvasBufferContext.fillText(plr.artAsset(),pos.x-15,pos.y);
-          //draw healthbar
-          _canvasBufferContext.fillStyle = 'rgba(50,50,50,0.3)';
-          _canvasBufferContext.fillRect(pos.x - 13,
-                                        pos.y - 20,
-                                        30,
-                                        3);
-          _canvasBufferContext.fillStyle = 'rgba(200,10,10,0.6)';
-          _canvasBufferContext.fillRect(pos.x - 13,
-                                        pos.y - 20,
-                                        30 * (plr.health / plr.maxHealth),
-                                        3);
+          plr.draw(_canvasBufferContext)
+            /*
+              var points = plr.poly();
+          if(points){
+              var start = points.pop();
+              _canvasBufferContext.fillStyle = 'rgba(250,0,0,0.5)';
+              _canvasBufferContext.beginPath();
+              _canvasBufferContext.moveTo(start[0],start[1]);
+              for(p in points){
+                _canvasBufferContext.lineTo(points[p][0],points[p][1]);
+              }
+              _canvasBufferContext.closePath();
+              _canvasBufferContext.fill();
+          }*/
         }
+/*
+        if (game_engine.game_state.hitBoxes != null){
+          for(h in game_engine.game_state.hitBoxes){
+            var hb = game_engine.game_state.hitBoxes[h];
+            var pl = game_engine.getPlayer(hb.pid);
+            if(pl){
+              var points = hb.poly(pl);
+              var start = points.pop();
+              _canvasBufferContext.fillStyle = 'rgba(250,0,250,0.5)';
+              _canvasBufferContext.beginPath();
+              _canvasBufferContext.moveTo(start[0],start[1]);
+              for(p in points){
+                _canvasBufferContext.lineTo(points[p][0],points[p][1]);
+              }
+              _canvasBufferContext.closePath();
+              _canvasBufferContext.fill();
+            }
+          }
+        }
+*/
         if (game_engine.game_state.ammos != null){
           for(a in game_engine.game_state.ammos){
             var am = game_engine.game_state.ammos[a];
@@ -298,28 +627,18 @@ function GamePro() {
             }
           }
         }
-        if (game_engine.game_state.beasts != null){
-          for(a in game_engine.game_state.beasts){
-            var am = game_engine.game_state.beasts[a];
-            if (am) {
-              pos = addCanvasOffset(am.position);
-              _canvasBufferContext.fillStyle = 'rgba(250,0,250,1.0)';
-              _canvasBufferContext.font = '20px Helvetica';
-              _canvasBufferContext.fillText(am.artAsset(),pos.x,pos.y);
-            }
+        for(a in game_engine.animations){
+          game_engine.animations[a].draw(_canvasBufferContext);
+        }
+        if(game_engine.terrainReady){
+        for(x in game_engine.tiles){
+          for(y in game_engine.tiles[x]){
+            game_engine.tiles[x][y].draw(_canvasBufferContext);
           }
         }
-         if (game_engine.game_state.walls != null){
-          for(w in game_engine.game_state.walls){
-            var wall = game_engine.game_state.walls[w];
-            if (wall) {
-              _canvasBufferContext.fillStyle = 'rgba(220,220,220,1.0)';
-              _canvasBufferContext.font = '20px Arial';
-              _canvasBufferContext.fillText(wall.artAsset(),wall.position.x,wall.position.y);
-            }
-          }
         }
         //this.draw_commandBar();
+        this.draw_chat();
         //draw buffer on screen
         _canvasContext.clearRect(0, 0, _canvas.width, _canvas.height);
         //_canvasBufferContext.globalCompositeOperation="source-atop";
@@ -327,10 +646,6 @@ function GamePro() {
     }
 
     this.updateMenus = function() {
-      this.waveCount.text("WAVE: " + game_engine.waveCount);
-      if (game_engine.game_state.players[player.id]){
-        this.killCount.text("KILLS: " + game_engine.game_state.players[player.id].kills);
-      }
     }
 
 }

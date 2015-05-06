@@ -14,14 +14,29 @@
   <script src="Player.js" type="text/javascript"></script>
   <script src="Weapon.js" type="text/javascript"></script>
   <script src="Ammo.js" type="text/javascript"></script>
-  <script src="Beast.js" type="text/javascript"></script>
-  <script src="Wall.js" type="text/javascript"></script>
   <script src="Banner.js" type="text/javascript"></script> 
+  <script src="ShitLord.js" type="text/javascript"></script> 
+  <script src="HitBox.js" type="text/javascript"></script> 
+  <script src="Terrain.js" type="text/javascript"></script> 
+  <script src="Tile.js" type="text/javascript"></script> 
+  <script src="Animation.js" type="text/javascript"></script> 
 
   <script>
+    $(document).keydown(function(e) {
+      if(e.keyCode == 32) {
+        return false;
+      }
+    });
     document.oncontextmenu = function() {return false;};
     $(function() {
       $('#canvas').mousedown(function(e) {
+        e.preventDefault();
+        
+        if(e.button === 2) {
+          // right click stuff
+        }
+      });
+      $('#canvas2').mousedown(function(e) {
         e.preventDefault();
         
         if(e.button === 2) {
@@ -37,58 +52,60 @@
 </head>
 <body>
   <div id ="container">
-    <canvas id="canvas" width="800" height="700"></canvas>
-	<div id="counters">
-	  <div id="waveCount">WAVE: 1</div>
-	  <br>
-	  <div id="killCount">KILLS: 0</div>
-	</div>
-	<form id="loginForm" onsubmit="document.proGame.submitLogin(false); return false;">
-	  <input class="loginInput" placeholder="username" type="text" id="login_q"/>
-	  <br>
-	  <input class="loginInput" placeholder="password" type="password" id="password_q"/>
-	  <br>
-	  <div id="loginButtonContainer">
-	    <input class="loginButton" type="submit" value="[ continue ]" />
-	    <a class="loginButton" onclick='document.proGame.submitLogin(true);'>[ new ]</a>
-	  </div>
-	</form>
-  <center>
- <div id="inventory">
-  <table id = "inventoryTable">
-    <tr>
-      <td> <div class="invBox" id = "invLabel1">Primary</div></td>
-      <td><div class="invBox" id = "invLabel2">Acc. 1</div></td>
-      <td><div class="invBox" id = "invLabel3">Acc. 2</div></td>
-      <td><div class="invBox" id = "invLabel4">Acc. 3</div></td>
-    </tr>
-    <tr>
-      <td><select id="invSelect1">
-          <option selected value="">~~~</option>
-      </select></td>
-      <td><select id="invSelect2">
-          <option selected value="">~~~</option>
-      </select></td>
-      <td><select id="invSelect3">
-          <option selected value="">~~~</option>
-      </select></td>
-      <td><select id="invSelect4">
-          <option selected value="">~~~</option>
-      </select></td>
-    </tr>
-  </table>
-      </br></br></br>
-	    <a class="loginButton" onclick='document.proGame'>[ Apply ]</a>
-	    <a class="loginButton" onclick='document.proGame.homeMenu();'>[ Back ]</a>
- </div>
-  </center>
- <div id = "mainMenu">
-  <a class="menuButton" onClick="document.proGame.menuClick('start');">[ Start Game ] </a></br></br>
-  <a class="menuButton" onClick="document.proGame.menuClick('equip');">[ Equipment ]</a></br></br>
-  <a class="menuButton" onClick="document.proGame.menuClick('scores');">[ High Scores ]</a></br></br>
-  <a class="menuButton" onClick="document.proGame.menuClick('logout');">[ Log Out ]</a>
- </div>
-
+    <div id="sidebarL">
+      <canvas id="canvas2" width="190" height="600"></canvas>
+    </div>
+    <div id="sidebarR"></div>
+      <canvas id="canvas3" width="190" height="600" hidden></canvas>
+    <div id="centerCanvas">
+      <canvas id="canvas" width="800" height="600"></canvas>
+      <form id="loginForm" onsubmit="document.proGame.submitLogin(false); return false;">
+        <input class="loginInput" placeholder="username" type="text" id="login_q"/>
+        <br>
+        <input class="loginInput" placeholder="password" type="password" id="password_q"/>
+        <br>
+        <div id="loginButtonContainer">
+          <input class="loginButton" type="submit" value="[ continue ]" id="continue"/>
+          <a class="loginButton" onclick='document.proGame.submitLogin(true);' id="new">[ new ]</a>
+        </div>
+      </form>
+      <center>
+        <div id="inventory">
+          <table id = "inventoryTable">
+            <tr>
+              <td> <div class="invBox" id = "invLabel1">Primary</div></td>
+              <td><div class="invBox" id = "invLabel2">Acc. 1</div></td>
+              <td><div class="invBox" id = "invLabel3">Acc. 2</div></td>
+              <td><div class="invBox" id = "invLabel4">Acc. 3</div></td>
+            </tr>
+            <tr>
+              <td><select id="invSelect1">
+                  <option selected value="">~~~</option>
+              </select></td>
+              <td><select id="invSelect2">
+                  <option selected value="">~~~</option>
+              </select></td>
+              <td><select id="invSelect3">
+                  <option selected value="">~~~</option>
+              </select></td>
+              <td><select id="invSelect4">
+                  <option selected value="">~~~</option>
+              </select></td>
+            </tr>
+          </table>
+          <a class="loginButton" onclick='document.proGame'>[ Apply ]</a>
+          <a class="loginButton" onclick='document.proGame.homeMenu();'>[ Back ]</a>
+        </div>
+      </center>
+      <div id = "mainMenu">
+        <a class="loginButton" onClick="document.proGame.menuClick('start');">[ Start Game ] </a></br></br>
+      </div>
+    </div>
+  <div id = "ui">
+    <center>
+      <canvas id="canvas4" width="760" height="100"></canvas>
+    </center>
+  </div>
   </div>
 </body>
 </html>

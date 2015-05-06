@@ -1,33 +1,47 @@
-var WIDTH = 8000;
-var HEIGHT = 8000;
-
+var WIDTH = 800;
+var HEIGHT = 600;
 (function(exports) {
 
-exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
+exports.GameEngine = function (serv, playerM, ammoM, weaponM, shitLordM, hitBoxM, terrainM, tileM, animationM){
   //support browser and server
     var server = serv;
     var playerModel = server ? require('./Player.js') : playerM;
     var ammo = server ? require('./Ammo.js') : ammoM;
     var weapon = server ? require('./Weapon.js') : weaponM;
-    var beast = server ? require('./Beast.js') : beastM;
-    var wall = server ? require('./Wall.js') : wallM;
+    var shitLord = server ? require('./ShitLord.js') : shitLordM;
+    var hitBox = server ? require('./HitBox.js') : hitBoxM;
+    var terrain = server ? require('./Terrain.js') : terrainM;
+    var tile = server ? require('./Tile.js') : tileM;
+    var animation = server ? require('./Animation.js') : animationM;
+    this.playerModels = {'weapon': weapon,'ammo':ammo,'hitBox':hitBox,'shitLord':shitLord}
 
     this.game_state = {};
     this.messageBuffer = [];
     this.clientBuffer = [];
     game_engine = this;
     var lastUpdate = +new Date;
+    var latency = 0;
     var lastMessage = +new Date;
-    var deleteQueue = {'players': [], 'ammos': [], 'beasts': [], 'walls': []};
+    var deleteQueue = {'players': [], 'ammos': [], 'hitBoxes':[]};
     var playerIndex = 1;
     var ammoIndex = 1;
-    var beastIndex = 1;
-    var wallIndex = 1;
-    this.waveCount = 1;
+    var animation_index = 1;
     var gameBounds = {x: WIDTH, y: HEIGHT};
     var collisions;
     this.pushData;
-    var objTypes = ['ammos','players', 'beasts', 'walls'];
+    var objTypes = ['ammos','players','hitBoxes'];
+    this.player_img = null;
+    this.tile_img = null;
+    this.spawn_img = null;
+    var respawn_queue = {};
+    this.terrainReady=false;
+    this.player_queue = [];
+    this.active_players = {1:false,2:false,3:false,4:false};
+    this.newPlayers = [];
+    this.animations = {};
+
+    this.levelHash = new terrain.Terrain().levelOne();
+    this.tiles = {};
 
     this.Initialize = function () {
       for (ob in objTypes) {
@@ -35,18 +49,68 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       }
     }
 
-    this.addPlayer = function(pid) {
+    this.generate_level = function(){
+      for(y in this.levelHash){
+        for(x in this.levelHash[y]){
+          var symb = this.levelHash[y][x];
+          if(symb != "."){
+            var t = new tile.Tile({'x':x*20,'y':y*20},symb,this.tile_img);
+            if(!this.tiles[t.position.x]){
+              this.tiles[t.position.x] = {};
+            }
+            this.tiles[t.position.x][t.position.y] = t;
+          }
+        }
+      }
+      this.terrainReady = true;
+    }
+
+    this.addPlayer = function(pid, kills, deaths, name, force) {
       if (!pid) {
         playerIndex += 1;
         pid = playerIndex;
       }
-      var p = new playerModel.Player(pid, server, weapon, ammo);
-      this.game_state.players[pid] = p;
+      var p = new playerModel.Player(pid, server, this.player_img, this.playerModels);
+      p.name = name ? name.slice(0,9) : "NoobLord";
+      p.totalKills = kills;
+      p.totalDeaths = deaths;
+      if(force){
+        this.game_state.players[p.id] = p;
+      }else{
+        this.player_queue.push(p);
+      }
       return pid;
+    }
+
+    this.startPlayer = function(p,pNum) {
+      p.playerNum = pNum;
+      this.active_players[pNum] = p.id
+      p.spawn_count = 10;
+      this.game_state.players[p.id] = p;
+      this.newPlayers.push({id:p.id,pos:p.position});
+    }
+
+    this.spawnAnimation = function(id,pos,type,img){
+      var aid = (id) ? id : nextAnimId();
+      var spawn = new animation.Animation(aid,pos,type,img);
+      this.animations[aid] = spawn;
     }
 
     this.LoadContent = function () {
         lastUpdate = +new Date;
+    }
+
+    this.queue_names = function () {
+      var names = [];
+      for(i in this.player_queue){
+        var p = this.player_queue[i];
+        names.push({name:p.name,kills:p.totalKills,deaths:p.totalDeaths,character:p.charName});
+      }
+      for(pid in respawn_queue){
+        var p = respawn_queue[pid];
+        names.push({name:p.name,kills:p.kills,deaths:p.deaths,character:''});
+      }
+      return names;
     }
 
     this.Run = function () {
@@ -59,14 +123,13 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
     this.serverPush = function() {
       if (!this.pushData) {return;}
       if (typeof game_state === 'undefined'){
-        game_state = {players: {}, ammos: {}, beasts: {}, walls : {}};
+        game_state = {players: {}, ammos: {}, hitBoxes: {}};
       }
       lastMessage = this.pushData.lastMessage;
-      this.waveCount = this.pushData.waveCount;
 
       for (ob in objTypes) {
         for (i in this.pushData[objTypes[ob]]) {
-          if (this.pushData[objTypes[ob]][i] == null) {
+          if (this.pushData[objTypes[ob]][i] == false) {
             this.dropObject(i,objTypes[ob]);
           }else {
             if (!this.game_state[objTypes[ob]][i]) {
@@ -90,6 +153,29 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       if (!server) {
         this.serverPush();
         this.applyClientBuffer();
+      }else {
+        for(pid in respawn_queue){
+          respawn_queue[pid].count -= 1;
+          if(respawn_queue[pid].count <= 0){
+            var pInfo = respawn_queue[pid];
+            this.addPlayer(pid,pInfo.kills,pInfo.deaths,pInfo.name);
+            delete respawn_queue[pid];
+          }
+        }
+      }
+      for(pid in this.active_players){
+        if(this.active_players[pid] == false){
+          var p = this.player_queue.shift();
+          if(p){
+            this.startPlayer(p,pid);
+          }
+        }
+      }
+      for(aid in this.animations){
+        var done = this.animations[aid].update();
+        if (done){
+          delete this.animations[aid];
+        }
       }
 
       while (message = this.messageBuffer.pop()){
@@ -109,64 +195,100 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
           var pl = this.game_state[objTypes[ob]][index];
           if (pl){
             try{
-              (objTypes[ob] == 'beasts') ? pl.update(lastUpdate,this.game_state) :
-                                           pl.update(lastUpdate);
-              if ((objTypes[ob] != 'beasts' || Object.keys(this.game_state.players).length == 0) &&
-                    this.checkBounds(pl.position)){
-                this.dropObject(index,objTypes[ob]);
+              if(objTypes[ob] == 'players'){
+                pl.update(lastUpdate,latency,this.tiles);
+              }else{
+                pl.update(lastUpdate);
               }
             } catch (e) {}
           }
 
          }
       }
+      this.objectCleanup();
       this.checkCollisions();
       lastUpdate = +new Date;
-      this.game_state['waveCount'] = this.waveCount;
     }
 
-    // aka THE BEAST LOOP
+    this.objectCleanup = function(){
+      for (i in this.game_state.hitBoxes){
+        var obj = this.game_state.hitBoxes[i];
+        if (!obj.valid){
+          this.dropObject(obj.id,'hitBoxes');
+        }
+      }
+    }
+
+    var boxCollide = function(b1,b2){
+      if(!b1 || !b2){return false;}
+      var maxX = b1[0][0];
+      var minX = b1[0][0];
+      var maxY = b1[0][1];
+      var minY = b1[0][1];
+      for(p in b1){
+        if(b1[p][0] > maxX){maxX = b1[p][0];}
+        if(b1[p][0] < minX){minX = b1[p][0];}
+        if(b1[p][1] > maxY){maxY = b1[p][1];}
+        if(b1[p][1] < minY){minY = b1[p][1];}
+      }
+      var maxX2 = b2[0][0];
+      var minX2 = b2[0][0];
+      var maxY2 = b2[0][1];
+      var minY2 = b2[0][1];
+      for(p in b2){
+        if(b2[p][0] > maxX2){maxX2 = b2[p][0];}
+        if(b2[p][0] < minX2){minX2 = b2[p][0];}
+        if(b2[p][1] > maxY2){maxY2 = b2[p][1];}
+        if(b2[p][1] < minY2){minY2 = b2[p][1];}
+      }
+      var ret = !((minY > maxY2) || (maxY < minY2) || (minX > maxX2) || (maxX < minX2));
+      return ret;
+    }
+
     this.checkCollisions = function() {
-      for (var b in this.game_state.beasts) {
-        var beast = this.game_state.beasts[b];
-        for (var p in this.game_state.players) {
-          //distance check for now
-          var d = this.distance(beast,this.game_state.players[p]);
-          if (d < 50){
-            var dmg = beast.attack(d);
-            if (dmg) {
-              if (this.game_state.players[p].wound(dmg)){
-                this.dropObject(p,'players');
+      //hb on hb
+      var collide = true;
+      for(h in this.game_state.hitBoxes){
+        var hbMain = this.game_state.hitBoxes[h];
+        if(hbMain){
+          for(t in this.game_state.hitBoxes){
+            var hbTest = this.game_state.hitBoxes[t];
+            if(hbTest){
+              if (hbMain.id != hbTest.id && hbMain.pid != hbTest.pid){
+                var plr1 = this.getPlayer(hbMain.pid);
+                var plr2 = this.getPlayer(hbTest.pid);
+                if(plr1 && plr2){
+                  if(boxCollide(hbMain.poly(plr1),hbTest.poly(plr2))){
+                    if(hbMain.shield && hbTest.shield){
+                     //nothing?
+                    }else if(hbMain.shield && !hbTest.shield){
+                      plr.receive_attack(plr1,plr2,hbMain,hbTest);
+                    }else {
+                      
+                    }
+                  }
+                }
+              }
+            }
+          }
+          for(p in this.game_state.players){
+            var plr = this.game_state.players[p];
+            if(hbMain.pid != plr.id){
+              var plr2 = this.getPlayer(hbMain.pid);
+              if(plr2 && plr){
+                if(boxCollide(hbMain.poly(plr2),plr.poly())){
+                  plr2.receive_attack(plr2,plr,hbMain);
+                }
               }
             }
           }
         }
-        for (var w in this.game_state.walls) {
-          var wall = this.game_state.walls[w];
-          var d = this.distance(beast, wall);
-          if(d < 50) {
-            var dmg = beast.attack(d);
-            if(dmg) {
-              if(wall.wound(dmg)) {
-                this.dropObject(w,'walls');
-              }
-            }
-          }
-        }
-        for (var a in this.game_state.ammos) {
-          //distance check for now
-          var d = this.distance(this.game_state.beasts[b],this.game_state.ammos[a]);
-          if (d < 10){
-            var dmg = this.game_state.ammos[a].damage();
-            if (dmg) {
-              if (this.game_state.beasts[b].wound(dmg[0])){
-                this.game_state.players[this.game_state.ammos[a].playerId].kills += 1;
-                this.dropObject(b,'beasts');
-              }
-              if (dmg[1]) {
-                this.dropObject(a,'ammos');
-              }
-            }
+      }
+      for(p in this.game_state.players){
+        var plr = this.game_state.players[p];
+        if(plr){
+          if(plr.position.x > (gameBounds.x + 60) || plr.position.x < -60 || plr.position.y > (gameBounds.y + 60)){
+            this.killPlayer(plr.id,true);
           }
         }
       }
@@ -191,15 +313,27 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
 
     this.apply_player_message = function(message) {
       //  changle player state based upon message
-        player = this.getPlayer(message.playerId);
-        if (player){
-          var objs = player.update_state(message);
-          if (objs) {
-          for (a in objs) {
-            var aid = this.nextAmmoId();
-            objs[a].id = aid;
-            this.game_state.ammos[aid] = objs[a];
+        if(message.disconnect){
+          delete respawn_queue[message.playerId];
+          for(i in this.player_queue){
+            if(this.player_queue[i].id == message.playerId){
+              this.player_queue.splice(i,1);
+            }
           }
+        }
+        var p = this.getPlayer(message.playerId);
+        if (p){
+          if(message.kill){
+            this.killPlayer(p.id,false);
+          }else {
+            var objs = p.update_state(message);
+            if (objs) {
+              for (a in objs) {
+                var aid = this.nextAmmoId();
+                objs[a].id = aid;
+                this.game_state.hitBoxes[aid] = objs[a];
+              }
+            }
           }
         }
     }
@@ -209,26 +343,46 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       return ammoIndex;
     }
 
-    this.nextBeastId = function() {
-      beastIndex += 1;
-      return beastIndex;
-    }
-
-    this.nextWallId = function() {
-      wallIndex += 1;
-      return wallIndex;
+    nextAnimId = function() {
+      animation_index += 1;
+      return animation_index;
     }
 
     this.addObject = function(id, type) {
-      if (type == 'players'){ this.addPlayer(id); }
+      if (type == 'players'){ this.addPlayer(id,null,null,null,true); }
       if (type == 'ammos'){ this.addAmmo(id); }
-      if (type == 'beasts'){ this.addBeast(id); }
-      if (type === 'walls') {this.addWall(id); }
+      if (type == 'hitBoxes'){ this.addHitbox(id); }
+    }
+
+    this.queue_respawn = function(p){
+      respawn_queue[p.id] = {count:40,kills:p.totalKills,deaths:p.totalDeaths,name:p.name};
+    }
+
+    this.killPlayer = function(pid,respawn){
+      var p = this.getPlayer(pid);
+      if(p){
+        p.totalDeaths += 1;
+        var killer_id = p.last_hit;
+        var killer = this.getPlayer(killer_id);
+        if(killer){
+          killer.kills += 1;
+          killer.totalKills += 1;
+        }
+        if(p.playerNum){
+          this.active_players[p.playerNum] = false;
+        }
+        if(respawn){
+          this.queue_respawn(p);
+        }
+        this.dropObject(pid,'players');
+      }
     }
 
     this.dropObject = function(id, type) {
+      if(type == 'players'){
+      }
       if (server) {
-        this.game_state[type][id] = null;
+        this.game_state[type][id] = false;
         deleteQueue[type].push(id);
       }else {
         delete this.game_state[type][id];
@@ -244,65 +398,22 @@ exports.GameEngine = function (serv, playerM, ammoM, weaponM, beastM, wallM){
       return aid;
     }
 
-    this.addBeast = function(id, origin) {
-      if (id == null) {
-        id = this.nextBeastId();
-      }
-      var b = new beast.Beast(id,origin,this.waveCount);
-      this.game_state.beasts[id] = b;
-      return id;
-    }
-    
-    this.addWall = function(id, pos) {
-      if(id == null) {
-        id = this.nextWallId();
-      }
-      var w = new wall.Wall(id, {x:200,y:200});
-      this.game_state.walls[id] = w;
-      return id;
-    }
 
-  this.spawnWave = function(level) {
-    var spawnNo = 10;
-    for (var i=0; i<spawnNo; i++){
-      var position = {};
-      if (i % 2 == 0){
-        position.x = randomNumber(0,WIDTH);
-        position.y = (i % 3 == 0) ? HEIGHT + 10 : -10;
-      }else {
-        position.x = (i % 3 == 0) ? WIDTH + 10 : -10;
-        position.y = randomNumber(0,HEIGHT);
+    this.addHitbox = function(hid) {
+      if (hid == null) {
+        hid = this.nextAmmoId();
       }
-      this.addBeast(null,position);
+      var a = new hitBox.HitBox(hid);
+      this.game_state.hitBoxes[hid] = a;
+      return hid;
     }
-    this.updatePlayersWave();
-    //this.addWall(null,{x:450,y:400});
-  }
-
-  this.updatePlayersWave = function(){
-    for (p in this.game_state.players){
-      this.game_state.players[p].highWave = this.waveCount;
-    }
-  }
 
   this.deleteSweep = function() {
     for (i in objTypes){
       var t = objTypes[i];
       for (j in deleteQueue[t]) {
         delete this.game_state[t][deleteQueue[t][j]];
-      }
-    }
-  }
-
-  this.waveCheck = function(hold){
-    if (!hold) {
-      if (Object.keys(this.game_state.players).length > 0){
-        if (Object.keys(this.game_state.beasts).length <= 0){
-          this.waveCount += 1;
-          this.spawnWave(this.waveCount);
-        }
-      }else {
-        this.waveCount = 0;
+        deleteQueue[t].splice(j,1);
       }
     }
   }
