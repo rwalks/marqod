@@ -185,9 +185,6 @@ function GamePro() {
           clearMenus();
           showInventory();
           break;
-        case 'logout':
-          socket.emit('logout');
-          location.reload();
       }
     }
 
@@ -223,20 +220,6 @@ function GamePro() {
         hash.push(c);
       }
       return hash;
-    }
-
-    function addCanvasOffset (pos){
-      ret = {};
-      ret.x = pos.x + canvasOffset.x;
-      ret.y = pos.y + canvasOffset.y;
-      return ret;
-    }
-
-    function subCanvasOffset (pos){
-      ret = {};
-      ret.x = pos.x - canvasOffset.x;
-      ret.y = pos.y - canvasOffset.y;
-      return ret;
     }
 
     function LocalEvent (event) {
@@ -335,12 +318,6 @@ function GamePro() {
       socket.on('login', function (data) {
       //use data to instantiate new account and ivnentory
         if (data) {
-          var cookie = $.cookie("marqod");
-          if (cookie == data.session) {
-            //fresh cookie
-          } else {
-            $.cookie("marqod", data.session, { expires: 3 });
-          }
           inventory = data.inventory;
           maxKills = data.maxKills;
           document.proGame.homeMenu();
@@ -529,17 +506,12 @@ function GamePro() {
 
 
     this.Draw = function () {
-     //   canvasOffset = player.deltaPos;
-     //   _canvasBufferContext.translate(player.deltaPos.x, player.deltaPod.y);
         //clear canvas
         _canvasBufferContext.clearRect(0, 0, _canvas.width, _canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
         _canvasBufferContext.fillStyle = 'rgba(0,0,0,0.7)';
         _canvasBufferContext.globalCompositeOperation="destination-over";
-        bg = new Image();
-        bg.src = "bg_b1.png"
-        _canvasBufferContext.drawImage(bg,0,0);
-        //_canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
+        _canvasBufferContext.fillRect(0,0,_canvas.width,_canvas.height);
         _canvasBufferContext.globalCompositeOperation="source-over";
         if(bg_img && uiMode == "game"){
         _canvasBufferContext.drawImage(bg_img,
@@ -570,16 +542,8 @@ function GamePro() {
         }else if (uiMode == "menu") {
             banner.draw(_canvasBufferContext,1.0);
         }
-        if (player){
-          plr = game_engine.game_state.players[player.id];
-          if (plr){
-            canvasOffset.x = 400 - plr.position.x;
-            canvasOffset.y = 350 - plr.position.y;
-          }
-        }
         for(p in game_engine.game_state.players){
           var plr = game_engine.game_state.players[p];
-          pos = addCanvasOffset(plr.position);
           //draw player
           plr.draw(_canvasBufferContext)
             /*
@@ -620,10 +584,9 @@ function GamePro() {
           for(a in game_engine.game_state.ammos){
             var am = game_engine.game_state.ammos[a];
             if (am) {
-              pos = addCanvasOffset(am.position);
               _canvasBufferContext.font = '20px Georgia';
               _canvasBufferContext.fillStyle = 'rgba(250,0,50,1.0)';
-              _canvasBufferContext.fillText("*",pos.x,pos.y);
+              _canvasBufferContext.fillText("*",am.position.x,am.position.y);
             }
           }
         }

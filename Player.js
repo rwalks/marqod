@@ -143,6 +143,7 @@ exports.Player = function(pid,server,player_img,models) {
   }
 
   this.check_terrain = function(tiles){
+    var test = this.position.y;
     var modX = this.position.x + this.deltaV.x;
     var modY = this.position.y + this.deltaV.y;
     var pol = this.poly();
